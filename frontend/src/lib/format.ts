@@ -1,11 +1,40 @@
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 
+const CURRENCY_SYMBOL: Record<string, string> = {
+  TL: "₺", TRY: "₺", USD: "$", EUR: "€", SEK: "kr", DKK: "kr",
+};
+
+let _prefCurrency = "TL";
+let _rates: Record<string, number> | null = null; // per USD
+
+export function setMoneyConfig(pref: string, rates: Record<string, number> | null) {
+  _prefCurrency = pref || "TL";
+  if (rates) _rates = rates;
+}
+
+export function getPrefCurrency() {
+  return _prefCurrency;
+}
+
+function fxKey(c: string) {
+  return c === "TL" ? "TRY" : c;
+}
+
 export function formatPrice(amount?: number | null, currency = "TL"): string {
   if (amount === null || amount === undefined) return "—";
-  const n = Math.round(amount);
+  let value = amount;
+  const from = fxKey(currency);
+  const to = fxKey(_prefCurrency);
+  if (_rates && from !== to && _rates[from] && _rates[to]) {
+    const usd = amount / _rates[from];
+    value = usd * _rates[to];
+  }
+  const sym = CURRENCY_SYMBOL[_prefCurrency] || _prefCurrency;
+  const n = Math.round(value);
   const s = n.toLocaleString("tr-TR");
-  return `${s} ${currency}`;
+  // krona/krone shown as suffix, others as suffix too for TR convention
+  return `${s} ${sym}`;
 }
 
 const MONTHS_TR = [

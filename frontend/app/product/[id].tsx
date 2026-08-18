@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, ScrollView, StyleSheet, Pressable } from "react-native";
+import { View, ScrollView, StyleSheet, Pressable, Switch, Share } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -26,9 +26,33 @@ export default function ProductDetail() {
     try {
       const p = await api.getProduct(id);
       setProduct(p);
+      setNotifyReturn(p.notify_return !== false);
+      setNotifyWarranty(p.notify_warranty !== false);
     } catch {}
     setLoading(false);
   }, [id]);
+
+  const [notifyReturn, setNotifyReturn] = useState(true);
+  const [notifyWarranty, setNotifyWarranty] = useState(true);
+
+  const shareProduct = async () => {
+    try {
+      haptic.medium();
+      const res: any = await api.shareProduct(id);
+      await Share.share({
+        message: `Saklio'da bir ürün paylaştım: ${product?.name}\n${res.deeplink}`,
+      });
+    } catch {}
+  };
+
+  const toggleNotify = async (field: "return" | "warranty", val: boolean) => {
+    haptic.light();
+    if (field === "return") setNotifyReturn(val);
+    else setNotifyWarranty(val);
+    try {
+      await api.updateNotify(id, field === "return" ? { notify_return: val } : { notify_warranty: val });
+    } catch {}
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -73,17 +97,22 @@ export default function ProductDetail() {
             <Pressable testID="detail-back" onPress={() => router.back()} style={styles.roundBtn}>
               <Feather name="chevron-left" size={24} color="#fff" />
             </Pressable>
-            <Pressable
-              testID="detail-delete"
-              onPress={async () => {
-                haptic.warning();
-                await api.deleteProduct(id);
-                router.back();
-              }}
-              style={styles.roundBtn}
-            >
-              <Feather name="trash-2" size={20} color="#fff" />
-            </Pressable>
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <Pressable testID="detail-share" onPress={shareProduct} style={styles.roundBtn}>
+                <Feather name="share-2" size={19} color="#fff" />
+              </Pressable>
+              <Pressable
+                testID="detail-delete"
+                onPress={async () => {
+                  haptic.warning();
+                  await api.deleteProduct(id);
+                  router.back();
+                }}
+                style={styles.roundBtn}
+              >
+                <Feather name="trash-2" size={20} color="#fff" />
+              </Pressable>
+            </View>
           </SafeAreaView>
         </View>
 
@@ -166,6 +195,47 @@ export default function ProductDetail() {
             ))}
           </Card>
 
+          {/* Notification preferences */}
+          <AppText variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
+            Bildirim tercihleri
+          </AppText>
+          <Card style={{ gap: spacing.md }}>
+            <View style={styles.notifyRow}>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" weight="semibold">
+                  İade hatırlatması
+                </AppText>
+                <AppText variant="caption" color={colors.mutedText}>
+                  Süre bitmeden haber ver
+                </AppText>
+              </View>
+              <Switch
+                testID="notify-return"
+                value={notifyReturn}
+                onValueChange={(v) => toggleNotify("return", v)}
+                trackColor={{ true: colors.brand, false: colors.border }}
+                thumbColor="#fff"
+              />
+            </View>
+            <View style={[styles.notifyRow, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md }]}>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body" weight="semibold">
+                  Garanti hatırlatması
+                </AppText>
+                <AppText variant="caption" color={colors.mutedText}>
+                  Garanti bitmeden haber ver
+                </AppText>
+              </View>
+              <Switch
+                testID="notify-warranty"
+                value={notifyWarranty}
+                onValueChange={(v) => toggleNotify("warranty", v)}
+                trackColor={{ true: colors.brand, false: colors.border }}
+                thumbColor="#fff"
+              />
+            </View>
+          </Card>
+
           {/* Actions */}
           <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
             <Button
@@ -180,6 +250,13 @@ export default function ProductDetail() {
               variant="secondary"
               icon={<Feather name="shield" size={18} color={colors.onSurface} />}
               onPress={() => router.push(`/warranty-claim?id=${id}`)}
+            />
+            <Button
+              testID="action-documents"
+              title="Belgeler"
+              variant="secondary"
+              icon={<Feather name="folder" size={18} color={colors.onSurface} />}
+              onPress={() => router.push(`/documents/${id}`)}
             />
           </View>
         </View>
@@ -221,6 +298,7 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: "row", gap: spacing.md },
   statusCard: { alignItems: "center", justifyContent: "center", width: 150 },
   timelineRow: { flexDirection: "row", gap: spacing.md },
+  notifyRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   tlDot: { width: 16, height: 16, borderRadius: 8, borderWidth: 3 },
   tlLine: { width: 2, flex: 1, marginVertical: 2 },
 });

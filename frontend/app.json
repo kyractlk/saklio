@@ -52,6 +52,13 @@
         {
           "photosPermission": "Fiş ve ürün fotoğraflarını seçmek için"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#8FCFAE"
+        }
       ]
     ],
     "experiments": {

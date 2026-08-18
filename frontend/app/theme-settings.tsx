@@ -13,6 +13,8 @@ const THEMES: { key: ThemeMode; name: string; desc: string; swatches: string[]; 
   { key: "soft", name: "Saklio Soft", desc: "Sıcak krem & mint — sakin ve premium", swatches: ["#F8F7F2", "#8FCFAE", "#5B9F7D"], bg: "#F8F7F2", ink: "#202522" },
   { key: "dark", name: "Saklio Dark", desc: "Tam karanlık mod — göz dostu", swatches: ["#111512", "#8FD3AF", "#202722"], bg: "#111512", ink: "#F6F7F6" },
   { key: "color", name: "Saklio Color", desc: "Pastel tonlar — genç ve canlı", swatches: ["#FBF9FF", "#A9C7F5", "#D1C4E9"], bg: "#FBF9FF", ink: "#26233A" },
+  { key: "sunset", name: "Saklio Sunset", desc: "Sıcak şeftali — enerjik ve davetkâr", swatches: ["#FFF6F0", "#F0A87E", "#D97D4E"], bg: "#FFF6F0", ink: "#3A2A22" },
+  { key: "ocean", name: "Saklio Ocean", desc: "Ferah mavi — sakin ve berrak", swatches: ["#F1F7FB", "#6FB7D6", "#3E86A8"], bg: "#F1F7FB", ink: "#16303F" },
 ];
 
 export default function ThemeSettings() {

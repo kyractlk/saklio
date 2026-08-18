@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 2 testing complete for Saklio Turkish receipt/warranty app. Backend: 15/15 NEW pytest tests passing (FX rates, notify prefs, share create/get/accept cross-user, documents CRUD re-verify, account export, full reset flow with debug_code, register-with-welcome-email path). Existing suite still 26/27 (one pre-existing xdist parallelism flake in TestDashboard using module-level pytest attributes, unrelated to this iteration). Frontend E2E on mobile viewport: login->home (no Gmail quick action ✓), Profile shows Para birimim/Tema rows with currency+theme values, currency picker sheet shows all 5 options (TL/USD/EUR/SEK/DKK) with Turkish names, Home prices switch $<->₺ live via /api/fx/rates, Theme-settings renders 5 cards (Soft/Dark/Color/Sunset/Ocean) and switching applies immediately (verified Dark), Profile has 'Verilerimi indir' + 'Verilerimi sil' buttons routing to /data screen which shows 'Onay kodu gönder' before revealing code input + confirm button, Product detail has Share/Delete/Back header buttons + Durum + 'Bildirim tercihleri' with two Switches + Return/Warranty/Documents actions (all testIDs present), Documents screen loads with add-document-fab that opens sheet with Fiş/Fatura/Garanti/Kullanım Kılavuzu/Servis Belgesi type + Kamera/Galeri/Dosyalardan seç options. 'Yakında' badges appear correctly on Gmail/Outlook rows in profile. No deprecated Expo packages (expo-camera/expo-notifications correct, no expo-av/barcode-scanner/background-fetch).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Bottom tab FAB (scan)", "issue": "Center scan FAB visually overlays the bottom product cards in Eşyalarım list; direct Playwright click on cards near bottom of viewport got intercepted by FAB and navigated to /scan. Real users can tap the visible card area, but tap target overlap should be reviewed (add extra bottom padding to FlatList contentContainer or reduce FAB hitSlop).", "testID": "tab-scan / product-card-*", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global (react-native-web)", "issues": [
+        "Console warnings persist from iter-1: 'shadow*' style props deprecated (use boxShadow); Invalid DOM property 'transform-origin' (use transformOrigin); 'props.pointerEvents is deprecated, use style.pointerEvents'. Non-blocking cosmetic web warnings."
+      ]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_saklio_v2.py",
+    "/app/backend/tests/test_saklio_api.py",
+    "/app/test_reports/pytest/pytest_results_v2.xml"
+  ],
+  "action_items": [
+    "(Low, optional) Add extra bottom padding to Eşyalarım FlatList so the center scan FAB does not overlap the last product card's tap target.",
+    "(Cosmetic, carried over) Replace shadow*/transform-origin/pointerEvents deprecated web props to silence RN-web dev warnings."
+  ],
+  "critical_code_review_comments": [
+    "server.py /fx/rates properly caches for 1h and falls back to hardcoded rates on API failure — solid.",
+    "share flow uses uuid.hex[:12] token — long enough for share, but consider adding TTL/expiry to shares collection (currently permanent).",
+    "confirm-reset correctly bcrypt-verifies debug_code and enforces 15-min expiry; wipes products/documents/messages/shares/files scoped to owner_id.",
+    "notify PUT filters None values with dict().items() — correct partial update semantics.",
+    "share/accept clones snapshot into new product with source='share' and fresh owner_id — correct isolation, no cross-owner leakage.",
+    "EMAIL_DEBUG=true correctly gates debug_code in response so tests can automate reset flow without SMTP.",
+    "server.py is 979 lines — approaching 700-line guideline; consider splitting auth/products/share/account modules in a future refactor."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_saklio_v2.py (new — 15 tests for iter-2 features)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Each pytest run registers fresh users (test+A*, test+B*, test+reset*, test+reg*) and seeds via /api/seed-demo. Frontend used demo@saklio.app/demo1234 with 4 seeded products retained from earlier iteration.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New endpoints all live and passing: GET /api/fx/rates (returns TRY/USD/EUR/SEK/DKK vs USD base with 1h cache, live open.er-api.com working from preview — TRY currently ~40), PUT /api/products/{id}/notify {notify_return|notify_warranty}, POST /api/products/{id}/share -> {token, deeplink saklio://share/<token>}, GET /api/share/{token}, POST /api/share/{token}/accept (clones snapshot cross-user), POST /api/account/export (sent may be false in preview), POST /api/account/request-reset (returns debug_code when EMAIL_DEBUG=true), POST /api/account/confirm-reset. Frontend testIDs added: currency-{TL|USD|EUR|SEK|DKK}, theme-{soft|dark|color|sunset|ocean}, data-export, data-delete, request-code, reset-code, confirm-delete, detail-share, notify-return, notify-warranty, action-documents, add-document-fab, doc-camera, doc-gallery, doc-files, doctype-{fis|fatura|garanti|kilavuz|servis}, profile-{dollar-sign|droplet|bell|user|globe}. NOTE: React Native Alert.alert on web does not surface as browser dialog — cannot assert via page.on('dialog'); use direct API assertion or visual check instead.",
+  "rca_of_issue": "N/A — no functional issues to root-cause. Only one minor tap-target overlap noted (scan FAB over last card)."
+}

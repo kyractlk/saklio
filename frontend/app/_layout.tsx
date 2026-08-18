@@ -10,6 +10,11 @@ import { StatusBar } from "expo-status-bar";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
 import { ThemeProvider } from "@/src/theme";
+import { api } from "@/src/api/client";
+import { setMoneyConfig } from "@/src/lib/format";
+import { registerForPush } from "@/src/lib/push";
+import * as Notifications from "expo-notifications";
+import { useRouter } from "expo-router";
 
 LogBox.ignoreAllLogs(true);
 
@@ -17,10 +22,41 @@ LogBox.ignoreAllLogs(true);
 SplashScreen.preventAutoHideAsync();
 
 function ThemedStack() {
-  const { theme, loading } = useAuth();
+  const { theme, loading, user } = useAuth();
+  const router = useRouter();
+
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
+
+  // Live FX rates + preferred currency
+  useEffect(() => {
+    let active = true;
+    api
+      .fxRates()
+      .then((r: any) => {
+        if (active) setMoneyConfig(user?.currency || "TL", r.rates);
+      })
+      .catch(() => setMoneyConfig(user?.currency || "TL", null));
+    return () => {
+      active = false;
+    };
+  }, [user?.currency]);
+
+  // Push registration + tap handling
+  useEffect(() => {
+    if (user?.id) registerForPush(user.id);
+    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
+      const url = (resp.notification.request.content.data as any)?.action_url;
+      if (url && typeof url === "string") {
+        try {
+          router.push(url as any);
+        } catch {}
+      }
+    });
+    return () => sub.remove();
+  }, [user?.id]);
+
   return (
     <ThemeProvider mode={theme}>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />

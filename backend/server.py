@@ -18,6 +18,7 @@ from datetime import datetime, timezone, timedelta
 
 import jwt
 import bcrypt
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -40,6 +41,85 @@ _storage_key = None
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("saklio")
+
+# ----------------------------------------------------------------------------
+# Push notifications (Emergent managed relay)
+# ----------------------------------------------------------------------------
+PUSH_BASE_URL = "https://integrations.emergentagent.com"
+PUSH_KEY = os.environ.get("EMERGENT_PUSH_KEY", "placeholder")
+_push_client = httpx.AsyncClient(base_url=PUSH_BASE_URL, headers={"X-Push-Key": PUSH_KEY}, timeout=10.0)
+
+
+async def send_push(recipients, data, idempotency_key=None):
+    if not recipients:
+        return
+    payload = {"recipients": recipients[:100], "data": data}
+    if idempotency_key:
+        payload["$idempotency_key"] = idempotency_key
+    resp = await _push_client.post("/api/v1/push/trigger", json=payload)
+    if resp.status_code == 401:
+        raise HTTPException(500, "EMERGENT_PUSH_KEY missing or invalid")
+    if resp.status_code >= 500:
+        raise HTTPException(502, "Push provider unavailable")
+    resp.raise_for_status()
+
+
+# ----------------------------------------------------------------------------
+# Email (SMTP)
+# ----------------------------------------------------------------------------
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASS = os.environ.get("SMTP_PASS")
+SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USER or "")
+EMAIL_DEBUG = os.environ.get("EMAIL_DEBUG", "false").lower() == "true"
+
+
+def _email_shell(title: str, body_html: str) -> str:
+    return f"""<div style="background:#F8F7F2;padding:32px 0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:24px;overflow:hidden;border:1px solid #EAE8DF;">
+    <div style="background:linear-gradient(135deg,#8FCFAE,#5B9F7D);padding:28px 32px;">
+      <div style="color:#0E241A;font-size:22px;font-weight:700;letter-spacing:2px;">saklio</div>
+    </div>
+    <div style="padding:28px 32px;color:#202522;">
+      <h2 style="margin:0 0 12px;font-size:20px;">{title}</h2>
+      {body_html}
+    </div>
+    <div style="padding:16px 32px;color:#757D78;font-size:12px;border-top:1px solid #EAE8DF;">
+      Fişi çek, gerisini Saklio halletsin.
+    </div>
+  </div>
+</div>"""
+
+
+def send_email(to_addr: str, subject: str, html: str, attachment: tuple = None) -> bool:
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASS):
+        logger.warning("SMTP not configured; skipping email")
+        return False
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_FROM
+        msg["To"] = to_addr
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html, "html"))
+        if attachment:
+            fname, data_bytes = attachment
+            part = MIMEApplication(data_bytes, Name=fname)
+            part["Content-Disposition"] = f'attachment; filename="{fname}"'
+            msg.attach(part)
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_FROM, [to_addr], msg.as_string())
+        return True
+    except Exception as e:
+        logger.warning(f"Email send failed: {e}")
+        return False
+
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -145,6 +225,8 @@ class ProductInput(BaseModel):
     receipt_path: Optional[str] = None
     items: List[ProductItem] = []
     note: Optional[str] = None
+    notify_return: bool = True
+    notify_warranty: bool = True
 
 
 class ChatInput(BaseModel):
@@ -216,6 +298,13 @@ async def register(inp: RegisterInput):
     }
     await db.users.insert_one(user)
     token = create_token(user["id"])
+    try:
+        body = _email_shell("Saklio’ya hoş geldin 👋", f"""
+          <p style="color:#757D78;line-height:22px;">Merhaba {inp.name}, hesabın oluşturuldu.</p>
+          <p style="color:#202522;">Artık fişlerini tarayıp iade ve garanti sürelerini tek yerden takip edebilirsin.</p>""")
+        await run_in_threadpool(send_email, user["email"], "Saklio’ya hoş geldin", body)
+    except Exception as e:
+        logger.warning(f"Welcome email failed: {e}")
     return {"token": token, "user": {"id": user["id"], "name": user["name"], "email": user["email"], "theme": user["theme"], "currency": user["currency"]}}
 
 
@@ -338,6 +427,224 @@ async def update_product(product_id: str, inp: ProductInput, user=Depends(get_cu
 @api_router.delete("/products/{product_id}")
 async def delete_product(product_id: str, user=Depends(get_current_user)):
     await db.products.delete_one({"id": product_id, "owner_id": user["id"]})
+    await db.documents.delete_many({"product_id": product_id, "owner_id": user["id"]})
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------------------
+# Documents vault (per product)
+# ----------------------------------------------------------------------------
+DOC_TYPES = {"fis", "fatura", "garanti", "kilavuz", "servis"}
+
+
+class DocumentInput(BaseModel):
+    type: str = "fis"  # fis, fatura, garanti, kilavuz, servis
+    name: Optional[str] = None
+    file_path: str
+
+
+@api_router.get("/products/{product_id}/documents")
+async def list_documents(product_id: str, user=Depends(get_current_user)):
+    docs = await db.documents.find({"product_id": product_id, "owner_id": user["id"]}).sort("created_at", -1).to_list(500)
+    return [clean(d) for d in docs]
+
+
+@api_router.post("/products/{product_id}/documents")
+async def add_document(product_id: str, inp: DocumentInput, user=Depends(get_current_user)):
+    p = await db.products.find_one({"id": product_id, "owner_id": user["id"]})
+    if not p:
+        raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+    dtype = inp.type if inp.type in DOC_TYPES else "fis"
+    doc = {
+        "id": str(uuid.uuid4()),
+        "owner_id": user["id"],
+        "product_id": product_id,
+        "type": dtype,
+        "name": inp.name or dtype,
+        "file_path": inp.file_path,
+        "created_at": now_iso(),
+    }
+    await db.documents.insert_one(doc)
+    # if it's a receipt and product has none, attach it
+    if dtype in ("fis", "fatura") and not p.get("receipt_path"):
+        await db.products.update_one({"id": product_id}, {"$set": {"receipt_path": inp.file_path}})
+    return clean(doc)
+
+
+@api_router.delete("/documents/{doc_id}")
+async def delete_document(doc_id: str, user=Depends(get_current_user)):
+    await db.documents.delete_one({"id": doc_id, "owner_id": user["id"]})
+    return {"ok": True}
+
+
+# ----------------------------------------------------------------------------
+# Push registration + notification prefs
+# ----------------------------------------------------------------------------
+class RegisterPushBody(BaseModel):
+    user_id: str
+    platform: str
+    device_token: str
+
+
+@api_router.post("/register-push", status_code=201)
+async def register_push(body: RegisterPushBody):
+    resp = await _push_client.post("/api/v1/push/users/register", json=body.model_dump())
+    if resp.status_code == 401:
+        raise HTTPException(500, "EMERGENT_PUSH_KEY missing or invalid")
+    if resp.status_code >= 500:
+        raise HTTPException(502, "Push provider unavailable")
+    resp.raise_for_status()
+    return {"status": "registered"}
+
+
+class NotifyPrefs(BaseModel):
+    notify_return: Optional[bool] = None
+    notify_warranty: Optional[bool] = None
+
+
+@api_router.put("/products/{product_id}/notify")
+async def update_notify(product_id: str, inp: NotifyPrefs, user=Depends(get_current_user)):
+    updates = {k: v for k, v in inp.dict().items() if v is not None}
+    if updates:
+        await db.products.update_one({"id": product_id, "owner_id": user["id"]}, {"$set": updates})
+    p = await db.products.find_one({"id": product_id, "owner_id": user["id"]})
+    if not p:
+        raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+    return enrich(p)
+
+
+# ----------------------------------------------------------------------------
+# Share via deeplink
+# ----------------------------------------------------------------------------
+@api_router.post("/products/{product_id}/share")
+async def share_product(product_id: str, user=Depends(get_current_user)):
+    p = await db.products.find_one({"id": product_id, "owner_id": user["id"]})
+    if not p:
+        raise HTTPException(status_code=404, detail="Ürün bulunamadı")
+    token = uuid.uuid4().hex[:12]
+    await db.shares.insert_one({
+        "token": token, "product_id": product_id, "from_user_id": user["id"],
+        "from_name": user.get("name", ""), "created_at": now_iso(),
+        "snapshot": {
+            "name": p.get("name"), "merchant": p.get("merchant"), "category": p.get("category"),
+            "price": p.get("price"), "currency": p.get("currency"), "purchase_date": p.get("purchase_date"),
+            "return_days": p.get("return_days", 14), "warranty_months": p.get("warranty_months", 24),
+            "image_path": p.get("image_path"),
+        },
+    })
+    return {"token": token, "deeplink": f"saklio://share/{token}"}
+
+
+@api_router.get("/share/{token}")
+async def get_share(token: str, user=Depends(get_current_user)):
+    s = await db.shares.find_one({"token": token})
+    if not s:
+        raise HTTPException(status_code=404, detail="Paylaşım bulunamadı")
+    snap = dict(s["snapshot"])
+    snap.update(compute_status(snap))
+    return {"from_name": s.get("from_name", ""), "product": snap}
+
+
+@api_router.post("/share/{token}/accept")
+async def accept_share(token: str, user=Depends(get_current_user)):
+    s = await db.shares.find_one({"token": token})
+    if not s:
+        raise HTTPException(status_code=404, detail="Paylaşım bulunamadı")
+    snap = s["snapshot"]
+    product = {
+        "id": str(uuid.uuid4()), "owner_id": user["id"],
+        "name": snap.get("name"), "merchant": snap.get("merchant"), "category": snap.get("category", "diger"),
+        "price": snap.get("price"), "currency": snap.get("currency", "TL"),
+        "purchase_date": snap.get("purchase_date"), "return_days": snap.get("return_days", 14),
+        "warranty_months": snap.get("warranty_months", 24), "image_path": snap.get("image_path"),
+        "items": [], "created_at": now_iso(), "source": "share",
+        "notify_return": True, "notify_warranty": True,
+    }
+    await db.products.insert_one(product)
+    # notify the sharer (best effort)
+    try:
+        await send_push(
+            recipients=[s["from_user_id"]],
+            data={"title": "Ürün eklendi", "message": f"{user.get('name','Biri')} paylaştığın '{snap.get('name')}' ürününü ekledi.",
+                  "action_url": f"/product/{product['id']}"},
+        )
+    except Exception as e:
+        logger.warning(f"Push failed (non-blocking): {e}")
+    return enrich(product)
+
+
+# ----------------------------------------------------------------------------
+# Account data: export & reset (email verified)
+# ----------------------------------------------------------------------------
+import random
+
+
+async def _collect_user_data(user):
+    products = await db.products.find({"owner_id": user["id"]}).to_list(2000)
+    documents = await db.documents.find({"owner_id": user["id"]}).to_list(2000)
+    messages = await db.messages.find({"owner_id": user["id"]}).to_list(2000)
+    return {
+        "user": {"id": user["id"], "name": user.get("name"), "email": user.get("email"),
+                 "currency": user.get("currency"), "created_at": user.get("created_at")},
+        "products": [clean(p) for p in products],
+        "documents": [clean(d) for d in documents],
+        "assistant_messages": [clean(m) for m in messages],
+        "exported_at": now_iso(),
+    }
+
+
+@api_router.post("/account/export")
+async def export_data(user=Depends(get_current_user)):
+    data = await _collect_user_data(user)
+    payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    counts = {"products": len(data["products"]), "documents": len(data["documents"])}
+    body = _email_shell("Verilerin hazır", f"""
+      <p style="color:#757D78;line-height:22px;">Talebin üzerine tüm Saklio verilerini ekte bir JSON dosyası olarak hazırladık.</p>
+      <p style="color:#202522;"><b>{counts['products']}</b> ürün ve <b>{counts['documents']}</b> belge dahil edildi.</p>""")
+    sent = await run_in_threadpool(send_email, user["email"], "Saklio — Verilerin", body, ("saklio-verilerim.json", payload))
+    return {"sent": sent, "email": user["email"], "counts": counts}
+
+
+class ResetConfirm(BaseModel):
+    code: str
+
+
+@api_router.post("/account/request-reset")
+async def request_reset(user=Depends(get_current_user)):
+    code = f"{random.randint(0, 999999):06d}"
+    code_hash = hash_password(code)
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+    await db.users.update_one({"id": user["id"]}, {"$set": {"reset_code_hash": code_hash, "reset_expires": expires}})
+    body = _email_shell("Veri silme onayı", f"""
+      <p style="color:#757D78;line-height:22px;">Tüm ürün ve belgelerini silmek için onay kodun:</p>
+      <div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#5B9F7D;margin:16px 0;">{code}</div>
+      <p style="color:#DF7C76;font-size:13px;">Bu işlemi sen başlatmadıysan bu e-postayı yok say.</p>""")
+    sent = await run_in_threadpool(send_email, user["email"], "Saklio — Veri silme kodu", body)
+    resp = {"sent": sent, "email": user["email"]}
+    if EMAIL_DEBUG:
+        resp["debug_code"] = code
+    return resp
+
+
+@api_router.post("/account/confirm-reset")
+async def confirm_reset(inp: ResetConfirm, user=Depends(get_current_user)):
+    u = await db.users.find_one({"id": user["id"]})
+    ch = u.get("reset_code_hash")
+    exp = u.get("reset_expires")
+    if not ch or not exp:
+        raise HTTPException(status_code=400, detail="Önce onay kodu iste")
+    if datetime.fromisoformat(exp) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Kodun süresi doldu")
+    if not verify_password(inp.code, ch):
+        raise HTTPException(status_code=400, detail="Kod hatalı")
+    await db.products.delete_many({"owner_id": user["id"]})
+    await db.documents.delete_many({"owner_id": user["id"]})
+    await db.messages.delete_many({"owner_id": user["id"]})
+    await db.shares.delete_many({"from_user_id": user["id"]})
+    await db.files.delete_many({"owner_id": user["id"]})
+    await db.users.update_one({"id": user["id"]}, {"$unset": {"reset_code_hash": "", "reset_expires": ""}})
+    body = _email_shell("Verilerin silindi", "<p style='color:#757D78;line-height:22px;'>Tüm ürün ve belge verilerin silindi. Hesabın aktif kalmaya devam ediyor.</p>")
+    await run_in_threadpool(send_email, user["email"], "Saklio — Verilerin silindi", body)
     return {"ok": True}
 
 
@@ -615,6 +922,35 @@ async def seed_demo(user=Depends(get_current_user)):
 @api_router.get("/")
 async def root():
     return {"message": "Saklio API"}
+
+
+# ----------------------------------------------------------------------------
+# Live FX rates (free, no key) — cached
+# ----------------------------------------------------------------------------
+_fx_cache = {"ts": 0, "rates": None}
+FX_SYMBOLS = ["TRY", "USD", "EUR", "SEK", "DKK"]
+
+
+@api_router.get("/fx/rates")
+async def fx_rates():
+    import time
+    now = time.time()
+    if _fx_cache["rates"] and (now - _fx_cache["ts"] < 3600):
+        return {"base": "USD", "rates": _fx_cache["rates"], "cached": True}
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get("https://open.er-api.com/v6/latest/USD")
+            data = r.json()
+            all_rates = data.get("rates", {})
+            rates = {s: all_rates[s] for s in FX_SYMBOLS if s in all_rates}
+            if rates:
+                _fx_cache["rates"] = rates
+                _fx_cache["ts"] = now
+                return {"base": "USD", "rates": rates, "cached": False}
+    except Exception as e:
+        logger.warning(f"FX fetch failed: {e}")
+    fallback = {"TRY": 39.0, "USD": 1.0, "EUR": 0.92, "SEK": 10.6, "DKK": 6.85}
+    return {"base": "USD", "rates": fallback, "cached": False, "fallback": True}
 
 
 app.include_router(api_router)

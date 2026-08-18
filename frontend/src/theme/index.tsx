@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 
-export type ThemeMode = "soft" | "dark" | "color";
+export type ThemeMode = "soft" | "dark" | "color" | "sunset" | "ocean";
 
 export interface ThemeColors {
   surface: string;
@@ -78,6 +78,44 @@ const COLOR: ThemeColors = {
   tabInactive: "#B4AEC6",
 };
 
+const SUNSET: ThemeColors = {
+  surface: "#FFF6F0",
+  surfaceSecondary: "#FFFFFF",
+  surfaceTertiary: "#FCE3D4",
+  elevated: "#FFFFFF",
+  onSurface: "#3A2A22",
+  mutedText: "#9A8377",
+  brand: "#F0A87E",
+  brandDark: "#D97D4E",
+  accent: "#FCE3D4",
+  onBrand: "#43220E",
+  success: "#68B58A",
+  warning: "#E9B75C",
+  error: "#DF7C76",
+  border: "#F4E2D6",
+  glassBg: "rgba(255,255,255,0.72)",
+  tabInactive: "#C9AF9F",
+};
+
+const OCEAN: ThemeColors = {
+  surface: "#F1F7FB",
+  surfaceSecondary: "#FFFFFF",
+  surfaceTertiary: "#DCEBF6",
+  elevated: "#FFFFFF",
+  onSurface: "#16303F",
+  mutedText: "#6C8391",
+  brand: "#6FB7D6",
+  brandDark: "#3E86A8",
+  accent: "#DCEBF6",
+  onBrand: "#08222E",
+  success: "#5FB6A4",
+  warning: "#E9B75C",
+  error: "#E58C86",
+  border: "#DCE7EE",
+  glassBg: "rgba(255,255,255,0.72)",
+  tabInactive: "#A9BEC9",
+};
+
 export const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
   elektronik: { bg: "#BBD4EE", fg: "#25415F" },
   moda: { bg: "#D1C4E9", fg: "#432D63" },
@@ -119,7 +157,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const MAP: Record<ThemeMode, ThemeColors> = { soft: SOFT, dark: DARK, color: COLOR };
+const MAP: Record<ThemeMode, ThemeColors> = { soft: SOFT, dark: DARK, color: COLOR, sunset: SUNSET, ocean: OCEAN };
 
 export function ThemeProvider({ mode, children }: { mode: ThemeMode; children: React.ReactNode }) {
   const value = useMemo<ThemeContextValue>(

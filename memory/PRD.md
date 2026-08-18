@@ -36,8 +36,25 @@ SAKLIO, kullanıcıların satın aldıkları ürünleri, fişleri, faturaları, 
 - [x] Emergent Object Storage görsel yükleme, GPT-5.4 vision fiş okuma
 - [x] 27/27 backend testi geçti; tüm frontend E2E akışları doğrulandı
 
+## Implemented (2026-06 — İkinci tur)
+- [x] Benzersiz Saklio logosu + uygulama ikonu (mint gradient kalkan + "S"), bildirim ikonu
+- [x] 5 tema: Soft / Dark / Color / Sunset / Ocean
+- [x] Belgeler Kasası: ürün başına fiş/fatura/garanti/kılavuz/servis; Kamera/Galeri/Dosyalardan seç, tam ekran görüntüleyici
+- [x] Gmail ana sayfadan kaldırıldı → Profil > Bağlı Hesaplar "Yakında"
+- [x] Push bildirim altyapısı (Emergent-managed); build sonrası çalışır
+- [x] Ürün bazında bildirim tercihleri (İade/Garanti toggle)
+- [x] Deeplink ile ürün paylaşımı + ekleme onay ekranı
+- [x] Canlı döviz çevirisi TL/USD/EUR/SEK/DKK + Profil para birimi seçici
+- [x] Verilerim: e-posta ile dışa aktarma + kodlu veri sıfırlama (SMTP aystech)
+- [x] 15/15 yeni backend testi + yeni frontend akışları doğrulandı
+
+## Deferred / Sonraki adımlar
+- [ ] Tam İngilizce i18n (TR/EN dil değiştirici) — kapsamlı ayrı bir tur gerektirir
+- [ ] Canlı Gmail OAuth (kullanıcının Google Cloud kimlik bilgileri gerekli)
+- [ ] Ürün eklenince internetten otomatik görsel bulma
+- [ ] Garanti talebi geçmişi/takibi (başvuru tarihi, kaç gün önce) + tamir fişi ilişkilendirme
+
 ## Backlog / Remaining
-### P1
 - Gerçek Gmail OAuth entegrasyonu (Google doğrulama süreci gerekli) — şu an simüle
 - Belgeler (Documents) vault ekranı: fiş/fatura/garanti/kılavuz kategorileri
 - Ürün düzenleme ekranı (şu an yalnızca oluştur/sil)

@@ -174,8 +174,8 @@ export default function Home() {
 
             {/* Quick actions */}
             <View style={styles.quickRow}>
-              <QuickAction icon="mail" label="Gmail’den içe aktar" onPress={() => router.push("/gmail-connect")} />
               <QuickAction icon="message-circle" label="Saklio Asistan" onPress={() => router.push("/assistant")} />
+              <QuickAction icon="rotate-ccw" label="İade Merkezi" onPress={() => router.push("/return-center")} />
             </View>
 
             {/* Recent */}

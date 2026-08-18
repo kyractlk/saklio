@@ -63,6 +63,24 @@ export const api = {
   warrantyClaim: (product_id: string, problem: string) =>
     request("/warranty/claim", { method: "POST", body: { product_id, problem } }),
 
+  listDocuments: (id: string) => request(`/products/${id}/documents`),
+  addDocument: (id: string, body: { type: string; name?: string; file_path: string }) =>
+    request(`/products/${id}/documents`, { method: "POST", body }),
+  deleteDocument: (docId: string) => request(`/documents/${docId}`, { method: "DELETE" }),
+
+  updateNotify: (id: string, body: { notify_return?: boolean; notify_warranty?: boolean }) =>
+    request(`/products/${id}/notify`, { method: "PUT", body }),
+  shareProduct: (id: string) => request(`/products/${id}/share`, { method: "POST" }),
+  getShare: (token: string) => request(`/share/${token}`),
+  acceptShare: (token: string) => request(`/share/${token}/accept`, { method: "POST" }),
+  registerPush: (body: { user_id: string; platform: string; device_token: string }) =>
+    request("/register-push", { method: "POST", body, auth: false }),
+
+  fxRates: () => request("/fx/rates", { auth: false }),
+  exportData: () => request("/account/export", { method: "POST" }),
+  requestReset: () => request("/account/request-reset", { method: "POST" }),
+  confirmReset: (code: string) => request("/account/confirm-reset", { method: "POST", body: { code } }),
+
   gmailPreview: () => request("/gmail/preview"),
   gmailImport: () => request("/gmail/import", { method: "POST" }),
   notifications: () => request("/notifications"),

@@ -129,13 +129,18 @@ export default function Scan() {
           <Pressable testID="pick-gallery" onPress={pickImage} style={styles.sideBtn}>
             <Feather name="image" size={24} color="#fff" />
           </Pressable>
-          <Pressable testID="capture-btn" onPress={capture} style={styles.shutter}>
-            {capturing ? (
-              <ActivityIndicator color={colors.brandDark} />
-            ) : (
-              <View style={[styles.shutterInner, { backgroundColor: colors.brand }]} />
-            )}
-          </Pressable>
+          <View style={{ alignItems: "center", gap: 8 }}>
+            <Pressable testID="capture-btn" onPress={capture} style={styles.shutter}>
+              {capturing ? (
+                <ActivityIndicator color={colors.brandDark} />
+              ) : (
+                <View style={[styles.shutterInner, { backgroundColor: colors.brand }]} />
+              )}
+            </Pressable>
+            <AppText variant="caption" color="#fff" weight="semibold">
+              Fişi Tara
+            </AppText>
+          </View>
           <View style={styles.sideBtn} />
         </View>
       </SafeAreaView>

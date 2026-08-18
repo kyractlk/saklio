@@ -110,7 +110,7 @@ export default function MyStuff() {
           keyExtractor={(item) => item.id}
           numColumns={2}
           columnWrapperStyle={{ gap: spacing.md, paddingHorizontal: spacing.lg }}
-          contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.md, paddingBottom: 130 }}
+          contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.md, paddingBottom: 160 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <Pressable
@@ -138,7 +138,7 @@ export default function MyStuff() {
         <FlatList
           data={products}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 130 }}
+          contentContainerStyle={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 160 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item, index }) => (
             <ProductCard product={item} index={index} onPress={() => router.push(`/product/${item.id}`)} />

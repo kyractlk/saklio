@@ -100,20 +100,26 @@ export default function Assistant() {
 
         {/* Quick actions */}
         {messages.length === 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.sm }}>
-            {QUICK.map((q) => (
-              <Pressable
-                key={q}
-                testID={`quick-${q}`}
-                onPress={() => send(q)}
-                style={[styles.quickChip, { backgroundColor: colors.surfaceTertiary }]}
-              >
-                <AppText variant="caption" color={colors.brandDark} weight="medium">
-                  {q}
-                </AppText>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <View style={{ height: 48, justifyContent: "center" }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: "center" }}
+            >
+              {QUICK.map((q) => (
+                <Pressable
+                  key={q}
+                  testID={`quick-${q}`}
+                  onPress={() => send(q)}
+                  style={[styles.quickChip, { backgroundColor: colors.surfaceTertiary }]}
+                >
+                  <AppText variant="caption" color={colors.brandDark} weight="medium">
+                    {q}
+                  </AppText>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
         )}
 
         {/* Input */}
