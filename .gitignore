@@ -6,6 +6,9 @@
 
 # Dependencies
 node_modules/
+frontend/dist/
+frontend/.expo/
+functions/node_modules/
 /node_modules
 /.pnp
 .pnp.js
@@ -82,7 +85,11 @@ memory/test_credentials.md
 android-sdk/
 .env
 .env.*
+!.env.example
 *.env
 credentials.json
 *.key
 .credentials
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+.firebase/

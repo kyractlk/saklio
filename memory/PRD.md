@@ -4,10 +4,10 @@
 SAKLIO, kullanıcıların satın aldıkları ürünleri, fişleri, faturaları, garanti belgelerini, iade sürelerini ve sahip oldukları ürünlerin tüm yaşam döngüsünü tek yerde yöneten modern bir mobil uygulama. Slogan: "Fişi çek, gerisini Saklio halletsin." — Türkçe, premium "Ownership OS" deneyimi.
 
 ## Architecture
-- **Frontend**: Expo (SDK 54) + expo-router (file-based). Reanimated animasyonlar, react-native-svg custom illüstrasyonlar, expo-camera + expo-image-picker, react-native-keyboard-controller, expo-blur (glass tab bar).
-- **Backend**: FastAPI (tek dosya `server.py`), `/api` prefix. JWT (bcrypt) auth. GPT-5.4 vision (Emergent LLM Key) fiş okuma + AI asistan + garanti başvuru metni.
-- **DB**: MongoDB (motor).
-- **Storage**: Emergent Managed Object Storage (görsel yükleme/indirme, token korumalı).
+- **Frontend**: Expo (SDK 54) + expo-router. Web: Firebase Hosting. Native: iOS `app.saklio` / Android `app.saklio`.
+- **Backend**: Firebase Auth + Cloud Firestore (`eur3`) + Cloud Functions (GPT-4o / GPT-4o-mini, kullanıcı başına rate limit).
+- **DB**: Cloud Firestore (Mongo yok).
+- **Storage**: Firebase Cloud Storage (`sakliov2.firebasestorage.app`).
 - **Theme**: 3 tema (Saklio Soft / Dark / Color) — Context tabanlı, kullanıcı profilinde saklanıyor.
 
 ## User Personas
@@ -33,7 +33,7 @@ SAKLIO, kullanıcıların satın aldıkları ürünleri, fişleri, faturaları, 
 - [x] Scan (kamera + izin akışı) → AI Processing (adım adım) → Confirm → Success (confetti)
 - [x] İade Verdict, Garanti Talebi (AI metin), Gmail Connect (animasyonlu sayaç), Asistan sohbeti
 - [x] Arama, Bildirimler, Profil, Tema Ayarları (3 tema kartı), Elle Ekle
-- [x] Emergent Object Storage görsel yükleme, GPT-5.4 vision fiş okuma
+- [x] Firebase Storage görsel yükleme (Admin SDK), GPT-5.4 vision fiş okuma
 - [x] 27/27 backend testi geçti; tüm frontend E2E akışları doğrulandı
 
 ## Implemented (2026-06 — İkinci tur)
@@ -49,7 +49,7 @@ SAKLIO, kullanıcıların satın aldıkları ürünleri, fişleri, faturaları, 
 - [x] 15/15 yeni backend testi + yeni frontend akışları doğrulandı
 
 ## Deferred / Sonraki adımlar
-- [ ] Tam İngilizce i18n (TR/EN dil değiştirici) — kapsamlı ayrı bir tur gerektirir
+- [x] TR/EN dil değiştirici (Profil)
 - [ ] Canlı Gmail OAuth (kullanıcının Google Cloud kimlik bilgileri gerekli)
 - [ ] Ürün eklenince internetten otomatik görsel bulma
 - [ ] Garanti talebi geçmişi/takibi (başvuru tarihi, kaç gün önce) + tamir fişi ilişkilendirme

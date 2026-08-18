@@ -42,6 +42,12 @@ export default function Profile() {
     } catch {}
   };
 
+  const selectLang = (code: "tr" | "en") => {
+    haptic.success();
+    setLangOpen(false);
+    setLang(code);
+  };
+
   const rows: { icon: any; label: string; value?: string; onPress: () => void; soon?: boolean }[] = [
     { icon: "user", label: t("account"), value: user?.email, onPress: () => {} },
     { icon: "dollar-sign", label: t("currency"), value: user?.currency || "TL", onPress: () => setCurOpen(true) },
@@ -211,10 +217,39 @@ export default function Profile() {
                   </AppText>
                 </View>
                 <AppText variant="body" style={{ flex: 1 }}>
-                  {c.label}
+                  {t(c.key)}
                 </AppText>
                 <AppText variant="caption" color={colors.mutedText}>
                   {c.code}
+                </AppText>
+                {active ? <Feather name="check" size={18} color={colors.brand} /> : null}
+              </Pressable>
+            );
+          })}
+        </Animated.View>
+      </Modal>
+
+      <Modal visible={langOpen} transparent animationType="fade" onRequestClose={() => setLangOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)} />
+        <Animated.View entering={SlideInDown.springify().damping(18)} style={[styles.sheet, { backgroundColor: colors.surface }]}>
+          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
+          <AppText variant="section" style={{ marginBottom: spacing.md }}>
+            {t("languageTitle")}
+          </AppText>
+          {LANGS.map((l) => {
+            const active = lang === l.code;
+            return (
+              <Pressable
+                key={l.code}
+                testID={`lang-${l.code}`}
+                onPress={() => selectLang(l.code as "tr" | "en")}
+                style={[styles.curRow, { borderColor: active ? colors.brand : colors.border, borderWidth: active ? 2 : 1, backgroundColor: colors.surfaceSecondary }]}
+              >
+                <View style={[styles.curSym, { backgroundColor: colors.surfaceTertiary }]}>
+                  <AppText variant="card">{l.flag}</AppText>
+                </View>
+                <AppText variant="body" style={{ flex: 1 }}>
+                  {l.label}
                 </AppText>
                 {active ? <Feather name="check" size={18} color={colors.brand} /> : null}
               </Pressable>

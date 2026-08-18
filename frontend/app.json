@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.ownershipos.gkk7dy",
+      "bundleIdentifier": "app.saklio",
       "infoPlist": {
         "NSCameraUsageDescription": "Fişlerini taramak için kamera erişimi",
         "NSPhotoLibraryUsageDescription": "Fiş ve ürün fotoğraflarını seçmek için"
@@ -22,7 +22,7 @@
         "backgroundColor": "#F8F7F2"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.emergent.ownershipos.gkk7dy",
+      "package": "app.saklio",
       "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
     },
     "web": {

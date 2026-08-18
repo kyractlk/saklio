@@ -23,6 +23,7 @@ email-validator==2.3.0
 emergentintegrations==0.2.0
 execnet==2.1.2
 fastapi==0.110.1
+firebase-admin==6.9.0
 fastuuid==0.14.0
 filelock==3.32.3
 flake8==7.3.0

@@ -1,0 +1,175 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+// users/{userId}
+//   name: string, email: string, theme: string, currency: string,
+//   language: string, created_at: timestamp, owner_id: string (immutable)
+//   reset_code_hash: string (optional), reset_expires: timestamp (optional)
+// users/{userId}/products/{productId}
+//   owner_id, name, merchant?, category, price?, currency, purchase_date?,
+//   return_days, warranty_months, image_path?, receipt_path?, items[],
+//   note?, notify_return, notify_warranty, created_at, source?
+// users/{userId}/documents/{docId}
+//   owner_id, product_id, type, name, file_path, created_at
+// users/{userId}/messages/{msgId}
+//   owner_id, session_id, role, text, created_at
+// users/{userId}/pushTokens/{tokenId}
+//   owner_id, platform, device_token, created_at
+// shares/{token}
+//   from_user_id, product map, created_at
+// rateLimits/{userId} — Admin SDK only (Cloud Functions)
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isValidEmail(email) {
+      return email is string && email.matches('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$');
+    }
+    function themes() {
+      return ['soft', 'dark', 'color', 'sunset', 'ocean'];
+    }
+    function currencies() {
+      return ['TL', 'USD', 'EUR', 'SEK', 'DKK'];
+    }
+    function categories() {
+      return ['elektronik', 'moda', 'ev', 'otomotiv', 'diger'];
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'theme', 'currency', 'owner_id', 'created_at'])
+        && data.keys().hasOnly([
+          'name', 'email', 'theme', 'currency', 'language', 'owner_id', 'created_at',
+          'reset_code_hash', 'reset_expires'
+        ])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && isValidEmail(data.email)
+        && data.theme in themes()
+        && data.currency in currencies()
+        && data.owner_id == request.auth.uid
+        && data.created_at is timestamp
+        && (!('language' in data) || (data.language in ['tr', 'en']))
+        && (!('reset_code_hash' in data) || (data.reset_code_hash is string && data.reset_code_hash.size() <= 128))
+        && (!('reset_expires' in data) || data.reset_expires is timestamp);
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'owner_id', 'category', 'created_at', 'return_days', 'warranty_months'])
+        && data.keys().hasOnly([
+          'name', 'owner_id', 'merchant', 'category', 'price', 'currency', 'purchase_date',
+          'return_days', 'warranty_months', 'image_path', 'receipt_path', 'items', 'note',
+          'notify_return', 'notify_warranty', 'created_at', 'source'
+        ])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.owner_id == request.auth.uid
+        && data.category in categories()
+        && data.return_days is number && data.return_days >= 0 && data.return_days <= 365
+        && data.warranty_months is number && data.warranty_months >= 0 && data.warranty_months <= 120
+        && data.created_at is timestamp
+        && (!('merchant' in data) || (data.merchant is string && data.merchant.size() <= 80))
+        && (!('price' in data) || data.price == null || (data.price is number && data.price >= 0 && data.price <= 100000000))
+        && (!('currency' in data) || data.currency in currencies())
+        && (!('purchase_date' in data) || (data.purchase_date is string && data.purchase_date.size() <= 32))
+        && (!('image_path' in data) || data.image_path == null || (data.image_path is string && data.image_path.size() <= 500))
+        && (!('receipt_path' in data) || data.receipt_path == null || (data.receipt_path is string && data.receipt_path.size() <= 500))
+        && (!('items' in data) || (data.items is list && data.items.size() <= 40))
+        && (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 1000))
+        && (!('notify_return' in data) || data.notify_return is bool)
+        && (!('notify_warranty' in data) || data.notify_warranty is bool)
+        && (!('source' in data) || (data.source is string && data.source.size() <= 32));
+    }
+
+    function isValidDocument(data) {
+      return data.keys().hasAll(['owner_id', 'product_id', 'type', 'file_path', 'created_at'])
+        && data.keys().hasOnly(['owner_id', 'product_id', 'type', 'name', 'file_path', 'created_at'])
+        && data.owner_id == request.auth.uid
+        && data.product_id is string && data.product_id.size() <= 80
+        && data.type in ['fis', 'fatura', 'garanti', 'kilavuz', 'servis', 'diger']
+        && data.file_path is string && data.file_path.size() >= 1 && data.file_path.size() <= 500
+        && data.created_at is timestamp
+        && (!('name' in data) || (data.name is string && data.name.size() <= 120));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['owner_id', 'session_id', 'role', 'text', 'created_at'])
+        && data.keys().hasOnly(['owner_id', 'session_id', 'role', 'text', 'created_at'])
+        && data.owner_id == request.auth.uid
+        && data.session_id is string && data.session_id.size() <= 80
+        && data.role in ['user', 'assistant']
+        && data.text is string && data.text.size() >= 1 && data.text.size() <= 8000
+        && data.created_at is timestamp;
+    }
+
+    function isValidShare(data) {
+      return data.keys().hasAll(['from_user_id', 'product', 'created_at'])
+        && data.keys().hasOnly(['from_user_id', 'product', 'created_at'])
+        && data.from_user_id == request.auth.uid
+        && data.product is map
+        && data.created_at is timestamp;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data)
+        && request.resource.data.owner_id == userId;
+      allow update: if isOwner(userId) && isValidUser(request.resource.data)
+        && request.resource.data.owner_id == resource.data.owner_id
+        && request.resource.data.created_at == resource.data.created_at
+        && request.resource.data.email == resource.data.email;
+      allow delete: if false;
+
+      match /products/{productId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidProduct(request.resource.data);
+        allow update: if isOwner(userId) && isValidProduct(request.resource.data)
+          && request.resource.data.owner_id == resource.data.owner_id
+          && request.resource.data.created_at == resource.data.created_at;
+        allow delete: if isOwner(userId);
+      }
+
+      match /documents/{docId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDocument(request.resource.data);
+        allow update: if false;
+        allow delete: if isOwner(userId);
+      }
+
+      match /messages/{msgId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidMessage(request.resource.data);
+        allow update: if false;
+        allow delete: if isOwner(userId);
+      }
+
+      match /pushTokens/{tokenId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.owner_id == userId
+          && request.resource.data.device_token is string
+          && request.resource.data.device_token.size() <= 4096
+          && request.resource.data.platform in ['ios', 'android', 'web'];
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /shares/{token} {
+      allow get: if isAuthenticated();
+      allow list: if false;
+      allow create: if isAuthenticated() && isValidShare(request.resource.data)
+        && token.size() >= 16 && token.size() <= 80;
+      allow update, delete: if isAuthenticated()
+        && resource.data.from_user_id == request.auth.uid;
+    }
+
+    match /rateLimits/{userId} {
+      allow read, write: if false;
+    }
+  }
+}

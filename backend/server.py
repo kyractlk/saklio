@@ -35,10 +35,10 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'saklio_dev_secret')
 JWT_ALGO = 'HS256'
 EMERGENT_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
-STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
-STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
 APP_NAME = "saklio"
-_storage_key = None
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "sakliov2")
+FIREBASE_STORAGE_BUCKET = os.environ.get("FIREBASE_STORAGE_BUCKET", "sakliov2.firebasestorage.app")
+_bucket = None
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("saklio")
@@ -127,37 +127,44 @@ api_router = APIRouter(prefix="/api")
 
 
 # ----------------------------------------------------------------------------
-# Object storage helpers
+# Firebase Storage helpers (Admin SDK — client rules stay locked)
 # ----------------------------------------------------------------------------
 def init_storage():
-    global _storage_key
-    if _storage_key:
-        return _storage_key
-    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    _storage_key = resp.json()["storage_key"]
-    return _storage_key
+    global _bucket
+    if _bucket:
+        return _bucket
+    import firebase_admin
+    from firebase_admin import credentials, storage as fb_storage
+
+    if not firebase_admin._apps:
+        cred_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
+        cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or str(ROOT_DIR / "firebase-service-account.json")
+        if cred_json:
+            cred = credentials.Certificate(json.loads(cred_json))
+        elif Path(cred_path).is_file():
+            cred = credentials.Certificate(cred_path)
+        else:
+            cred = credentials.ApplicationDefault()
+        firebase_admin.initialize_app(cred, {
+            "projectId": FIREBASE_PROJECT_ID,
+            "storageBucket": FIREBASE_STORAGE_BUCKET,
+        })
+    _bucket = fb_storage.bucket()
+    return _bucket
 
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
-    global _storage_key
-    key = init_storage()
-    resp = requests.put(f"{STORAGE_URL}/objects/{path}",
-                        headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
-    if resp.status_code == 503:
-        _storage_key = None
-        key = init_storage()
-        resp = requests.put(f"{STORAGE_URL}/objects/{path}",
-                            headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
-    resp.raise_for_status()
-    return resp.json()
+    blob = init_storage().blob(path)
+    blob.upload_from_string(data, content_type=content_type)
+    return {"path": path}
 
 
 def get_object(path: str):
-    key = init_storage()
-    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+    blob = init_storage().blob(path)
+    if not blob.exists():
+        raise FileNotFoundError(path)
+    blob.reload()
+    return blob.download_as_bytes(), (blob.content_type or "application/octet-stream")
 
 
 # ----------------------------------------------------------------------------
@@ -410,6 +417,8 @@ async def download_file(file_path: str, token: Optional[str] = None, authorizati
         raise HTTPException(status_code=404, detail="Dosya bulunamadı")
     try:
         content, ct = await run_in_threadpool(get_object, file_path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Dosya bulunamadı")
     except Exception:
         raise HTTPException(status_code=500, detail="Dosya alınamadı")
     return Response(content=content, media_type=ct)

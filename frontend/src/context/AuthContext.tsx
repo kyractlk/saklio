@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import { storage } from "@/src/utils/storage";
-import { api, TOKEN_KEY } from "@/src/api/client";
+import { api } from "@/src/api/client";
+import { auth } from "@/src/lib/firebase";
 import type { ThemeMode } from "@/src/theme";
 
 export interface User {
@@ -29,30 +31,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [theme, setThemeState] = useState<ThemeMode>("soft");
 
-  const bootstrap = useCallback(async () => {
-    const token = await storage.secureGet<string>(TOKEN_KEY, "");
+  const loadProfile = useCallback(async () => {
     const savedTheme = await storage.getItem<ThemeMode>("saklio_theme", "soft");
     if (savedTheme) setThemeState(savedTheme);
-    if (token) {
-      try {
-        const me = (await api.me()) as User;
-        setUser(me);
-        if (me.theme) setThemeState(me.theme);
-      } catch {
-        await storage.secureRemove(TOKEN_KEY);
-        setUser(null);
-      }
+    if (!auth.currentUser) {
+      setUser(null);
+      return;
     }
-    setLoading(false);
+    try {
+      const me = (await api.me()) as User;
+      setUser(me);
+      if (me.theme) {
+        setThemeState(me.theme);
+        await storage.setItem("saklio_theme", me.theme);
+      }
+    } catch {
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {
-    bootstrap();
-  }, [bootstrap]);
+    const unsub = onAuthStateChanged(auth, async () => {
+      await loadProfile();
+      setLoading(false);
+    });
+    return unsub;
+  }, [loadProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const res: any = await api.login(email, password);
-    await storage.secureSet(TOKEN_KEY, res.token);
     setUser(res.user);
     if (res.user.theme) {
       setThemeState(res.user.theme);
@@ -62,12 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
     const res: any = await api.register(name, email, password);
-    await storage.secureSet(TOKEN_KEY, res.token);
     setUser(res.user);
   }, []);
 
   const signOut = useCallback(async () => {
-    await storage.secureRemove(TOKEN_KEY);
+    await api.signOut();
     setUser(null);
   }, []);
 
