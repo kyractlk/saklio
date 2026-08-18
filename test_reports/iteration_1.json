@@ -1,0 +1,31 @@
+{
+  "summary": "Full backend + frontend testing of Saklio MVP (Turkish receipt/warranty tracking app). Backend: 27/27 pytest tests passing across auth, products CRUD with return_status/warranty_status computation, dashboard, gmail preview+import (7 products), notifications, warranty claim (GPT-5.4), return verdict, assistant chat (GPT-5.4), scan (GPT-5.4 vision), image upload/download, seed-demo. Frontend: onboarding (4 slides) -> register -> home dashboard (greeting, act-now countdown rings, İade Merkezi summary, quick actions, recent products), My Stuff tab (category chips), Activity tab (İade Merkezi/Garantilerim + Aktif/Yakında/Süresi dolmuş chips), Profile (settings rows + sign out), Notifications (derived alerts), Theme settings (3 cards Soft/Dark/Color), Gmail connect, Add-manually form, Assistant chat all render and integrate with backend. Turkish UI throughout. No deprecated Expo packages detected (uses expo-camera correctly, react-native-safe-area-context, no expo-av/barcode-scanner/background-fetch).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["React Native Web console warnings: 'shadow*' style props are deprecated (use boxShadow), and 'transform-origin' invalid DOM property (use transformOrigin). Non-blocking but should be cleaned up in StyleSheet definitions."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_saklio_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional cosmetic) Replace deprecated 'shadowColor/shadowOffset/shadowOpacity/shadowRadius' with 'boxShadow' shorthand in StyleSheet to silence RN-web warnings.",
+    "(Optional cosmetic) Fix 'transform-origin' -> 'transformOrigin' in animated style props."
+  ],
+  "critical_code_review_comments": [
+    "server.py uses async endpoints correctly; MongoDB _id excluded via clean(); env vars used properly; JWT auth solid.",
+    "compute_status thresholds (>3 active, >=0 ending, <0 expired) verified via tests.",
+    "Gmail import creates 7 products; seed-demo creates 4 and is idempotent.",
+    "scan endpoint correctly strips data: URI prefix and parses JSON with fallback regex.",
+    "download_file requires token via query or Authorization header — correctly protects owner_id."
+  ],
+  "updated_files": ["/app/backend/tests/test_saklio_api.py (new)"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Tests register fresh users per run (email prefix ui+/test+). Seeded via POST /api/seed-demo and /api/gmail/import. All test products prefixed TEST_.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend base URL: EXPO_PUBLIC_BACKEND_URL. Auth via /api/auth/register->JWT->Bearer. testIDs available on frontend: login-email/password, register-name/email/password/submit, tab-home/stuff/activity/profile, tab-scan (FAB), product-card-<id>. Onboarding stores completion in AsyncStorage — clear localStorage to re-see onboarding. Camera scan (expo-camera) cannot render preview on web preview environment — validate scan pipeline via backend /api/scan instead.",
+  "rca_of_issue": "N/A - no issues found"
+}

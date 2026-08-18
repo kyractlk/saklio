@@ -1,0 +1,212 @@
+{
+  "app_name": "SAKLIO",
+  "personality": "1 iOS-Native Clean with 4 Tactile color warmth",
+  "personality_one_liner": "A premium, trustworthy, and warm 'Ownership OS' that makes managing receipts and warranties feel like magic through ultra-smooth micro-animations, cream/mint palettes, and sophisticated typography.",
+  "color": {
+    "light": {
+      "surface": "#F8F7F2",
+      "onSurface": "#202522",
+      "surfaceSecondary": "#FFFFFF",
+      "onSurfaceSecondary": "#202522",
+      "surfaceTertiary": "#DDF3E6",
+      "onSurfaceTertiary": "#5B9F7D",
+      "surfaceInverse": "#202522",
+      "onSurfaceInverse": "#F8F7F2",
+      "brand": "#8FCFAE",
+      "brandPrimary": "#8FCFAE",
+      "onBrandPrimary": "#202522",
+      "brandSecondary": "#5B9F7D",
+      "onBrandSecondary": "#FFFFFF",
+      "brandTertiary": "#DDF3E6",
+      "onBrandTertiary": "#202522",
+      "success": "#68B58A",
+      "onSuccess": "#FFFFFF",
+      "warning": "#E9B75C",
+      "onWarning": "#202522",
+      "error": "#DF7C76",
+      "onError": "#FFFFFF",
+      "info": "#8FCFAE",
+      "onInfo": "#202522",
+      "border": "#EAE8DF",
+      "borderStrong": "#C8C6BC",
+      "divider": "#EAE8DF"
+    },
+    "dark": {
+      "surface": "#111512",
+      "onSurface": "#F6F7F6",
+      "surfaceSecondary": "#181D1A",
+      "onSurfaceSecondary": "#F6F7F6",
+      "surfaceTertiary": "#202722",
+      "onSurfaceTertiary": "#9DA7A0",
+      "surfaceInverse": "#F6F7F6",
+      "onSurfaceInverse": "#111512",
+      "brand": "#8FD3AF",
+      "brandPrimary": "#8FD3AF",
+      "onBrandPrimary": "#111512",
+      "brandSecondary": "#5B9F7D",
+      "onBrandSecondary": "#F6F7F6",
+      "brandTertiary": "#202722",
+      "onBrandTertiary": "#9DA7A0",
+      "success": "#68B58A",
+      "onSuccess": "#111512",
+      "warning": "#E9B75C",
+      "onWarning": "#111512",
+      "error": "#DF7C76",
+      "onError": "#111512",
+      "info": "#8FD3AF",
+      "onInfo": "#111512",
+      "border": "#2A322C",
+      "borderStrong": "#424E45",
+      "divider": "#2A322C"
+    },
+    "pastel_categories": {
+      "electronics": "#BBD4EE",
+      "fashion": "#D1C4E9",
+      "home": "#FFCC80",
+      "auto": "#B0BEC5"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Inter",
+    "textFontFamily": "Inter",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 26,
+      "3xl": 36
+    }
+  },
+  "spacing": {
+    "rule": "Adopt an 8px base rhythm (Revolut/Linear style). Use generous padding (lg/xl) around main content to let the UI breathe. Tightly group related metadata.",
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "2xl": 40,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "pill": 9999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Feather",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use frosted glass on the bottom tab bar where the center scan button floats.",
+      "Use glass headers over scrolling lists in 'My Stuff' and 'Return Center'."
+    ],
+    "dont's": [
+      "Do not apply glass to body cards (receipts, items). Keep them as clean, solid surfaceSecondary.",
+      "Do not over-blur the background to the point of losing contrast."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "A dashboard overview showing immediate actions and summary data.",
+      "states": {
+        "loading": "Skeleton loaders mimicking the horizontal 'Act Now' cards and item list.",
+        "empty": "Custom SVG illustration of a neat desk with a 'Scan your first receipt' CTA.",
+        "error": "Soft error banner with retry."
+      },
+      "layout": "Search-first top area. Followed by a horizontal scroll of 'Act now' cards (expiring warranties, return windows). A central floating '+' or 'Scan' button sits in the bottom tab navigation. Use 9999px pill radii for tags."
+    },
+    {
+      "name": "Scan Camera & AI Processing",
+      "purpose": "Capture flow for receipts with real-time feedback.",
+      "states": {
+        "loading": "Step-by-step animated states: Fiş okunuyor → Mağaza bulundu → Ürünler tanınıyor → İade kontrolü → Garanti",
+        "empty": "N/A",
+        "error": "Clear manual review fallback with large, tappable fields for critical data."
+      },
+      "layout": "Edge-detection camera view with a rounded receipt frame overlay and moving light animation. Post-capture, present a success screen with a confetti micro-animation and checkmark."
+    },
+    {
+      "name": "My Stuff (Eşyalarım)",
+      "purpose": "Inventory of all owned items.",
+      "states": {
+        "loading": "Skeleton grid layout.",
+        "empty": "Custom minimal SVG illustration of an empty shelf. Primary CTA to add an item.",
+        "error": "Error message with 'Retry' button."
+      },
+      "layout": "Sticky top bar with grid/list view toggle and category chip filters (Electronics, Fashion, etc., using pastel category colors). Cards use surfaceSecondary on the surface background."
+    },
+    {
+      "name": "Product Detail",
+      "purpose": "Deep dive into a specific item's lifecycle, warranty, and return info.",
+      "states": {
+        "loading": "Skeleton hero image and timeline.",
+        "empty": "N/A",
+        "error": "Standard error state."
+      },
+      "layout": "Hero image at the top with a gradient-to-dark scrim. Includes a dynamic countdown ring for return windows and a vertical timeline of the product's lifecycle (Purchase -> Return Deadline -> Warranty Expiry)."
+    },
+    {
+      "name": "Return & Warranty Center",
+      "purpose": "Dedicated tabs for managing items based on their status.",
+      "states": {
+        "loading": "List skeleton.",
+        "empty": "Custom SVG illustration representing 'All good, no expiring items'.",
+        "error": "Standard error state."
+      },
+      "layout": "Tabbed interface (Active / Ending soon / Expired) using pill-shaped segmented controls. Display AI verdicts for return details."
+    },
+    {
+      "name": "AI Assistant",
+      "purpose": "Chat interface for quick actions and ownership queries.",
+      "states": {
+        "loading": "Chat bubble skeleton.",
+        "empty": "Welcome message with suggested quick action chips.",
+        "error": "Chat connection error."
+      },
+      "layout": "Conversational UI with quick action pills at the bottom, above the input field. Floating date headers in the scroll view."
+    }
+  ],
+  "images": {
+    "product_detail_hero": {
+      "url": "https://images.unsplash.com/photo-1786103776067-2df6237af61d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxBcHBsZSUyMFdhdGNoJTIwVWx0cmElMjBjbGVhbiUyMHN0dWRpbyUyMHNob3R8ZW58MHx8fHwxNzg3MDY3Njc1fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Apple Watch Ultra clean studio shot for product detail hero"
+    },
+    "receipt_demo": {
+      "url": "https://images.unsplash.com/photo-1632152133952-98b268dc4b86?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwbW9kZXJuJTIwcmVjZWlwdCUyMG9uJTIwZGVza3xlbnwwfHx8fDE3ODcwNjc2NzV8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist modern receipt on desk"
+    }
+  },
+  "haptics": {
+    "tab_press": "light",
+    "button_primary": "medium",
+    "scan_capture": "heavy",
+    "success_feedback": "success",
+    "error_feedback": "error"
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the SAKLIO SOFT (Main) and SAKLIO DARK exact hex codes provided in the user prompt. Use the pastel tokens for category chips (e.g., Electronics, Fashion).",
+    "Ensure all skeleton loaders are implemented using `react-native-reanimated`. Do NOT use standard ActivityIndicator spinners per user requirements.",
+    "The UI is in Turkish. Use terms like 'Ana Sayfa', 'Eşyalarım', 'Aktiviteler', 'Profil' for tabs.",
+    "Build a custom 'Scan' center button for the bottom tab bar. It should be circular, floating slightly above the bar, triggering the heavy haptic.",
+    "Implement micro-animations on all interactive elements: buttons should scale down slightly on press (0.97 scale), list items should stagger animate on entry, and the 'AI Processing' step-by-step should transition smoothly.",
+    "Since custom SVG illustrations are required for empty states, generate custom placeholder SVGs mimicking a 'rounded, soft, minimal, slightly 3D layered, thin outlines' style, or use placeholder `<Svg>` structures that reflect this requirement.",
+    "Typography must be Inter, employing a hierarchy based on the provided scale: Display 32-36, Page Title 26, Section 20, Card 16-18, Body 14-16. Use tabular numerals for prices and countdowns.",
+    "In the Product Detail screen, implement the 'countdown ring for return' and 'lifecycle timeline' natively using SVG/Reanimated for smooth rendering."
+  ]
+}
