@@ -7,23 +7,30 @@ import { Screen } from "@/src/components/layout";
 import { AppText, Card } from "@/src/components/ui";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { useAuth } from "@/src/context/AuthContext";
+import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { haptic, setMoneyConfig } from "@/src/lib/format";
 
 const THEME_NAMES: Record<string, string> = { soft: "Saklio Soft", dark: "Saklio Dark", color: "Saklio Color", sunset: "Saklio Sunset", ocean: "Saklio Ocean" };
 const CURRENCIES = [
-  { code: "TL", label: "Türk Lirası", sym: "₺" },
-  { code: "USD", label: "Dolar", sym: "$" },
-  { code: "EUR", label: "Euro", sym: "€" },
-  { code: "SEK", label: "İsveç Kronu", sym: "kr" },
-  { code: "DKK", label: "Danimarka Kronu", sym: "kr" },
+  { code: "TL", key: "cur_TL", sym: "₺" },
+  { code: "USD", key: "cur_USD", sym: "$" },
+  { code: "EUR", key: "cur_EUR", sym: "€" },
+  { code: "SEK", key: "cur_SEK", sym: "kr" },
+  { code: "DKK", key: "cur_DKK", sym: "kr" },
+];
+const LANGS = [
+  { code: "tr", label: "Türkçe", flag: "🇹🇷" },
+  { code: "en", label: "English", flag: "🇬🇧" },
 ];
 
 export default function Profile() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user, signOut, theme, refresh } = useAuth();
+  const { t, lang, setLang } = useT();
   const [curOpen, setCurOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   const selectCurrency = async (code: string) => {
     haptic.success();
@@ -36,16 +43,16 @@ export default function Profile() {
   };
 
   const rows: { icon: any; label: string; value?: string; onPress: () => void; soon?: boolean }[] = [
-    { icon: "user", label: "Hesabım", value: user?.email, onPress: () => {} },
-    { icon: "dollar-sign", label: "Para birimim", value: user?.currency || "TL", onPress: () => setCurOpen(true) },
-    { icon: "globe", label: "Dil", value: "Türkçe", onPress: () => {} },
-    { icon: "bell", label: "Bildirimler", onPress: () => router.push("/notifications") },
-    { icon: "droplet", label: "Tema", value: THEME_NAMES[theme], onPress: () => router.push("/theme-settings") },
+    { icon: "user", label: t("account"), value: user?.email, onPress: () => {} },
+    { icon: "dollar-sign", label: t("currency"), value: user?.currency || "TL", onPress: () => setCurOpen(true) },
+    { icon: "globe", label: t("language"), value: LANGS.find((l) => l.code === lang)?.label, onPress: () => setLangOpen(true) },
+    { icon: "bell", label: t("notifications"), onPress: () => router.push("/notifications") },
+    { icon: "droplet", label: t("theme"), value: THEME_NAMES[theme], onPress: () => router.push("/theme-settings") },
   ];
 
   const connectRows: { icon: any; label: string; onPress: () => void; soon?: boolean }[] = [
-    { icon: "mail", label: "Gmail’i bağla", onPress: () => {}, soon: true },
-    { icon: "inbox", label: "Outlook’u bağla", onPress: () => {}, soon: true },
+    { icon: "mail", label: t("connectGmail"), onPress: () => {}, soon: true },
+    { icon: "inbox", label: t("connectOutlook"), onPress: () => {}, soon: true },
   ];
 
   return (
@@ -54,7 +61,7 @@ export default function Profile() {
         contentContainerStyle={{ paddingBottom: 130, paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}
         showsVerticalScrollIndicator={false}
       >
-        <AppText variant="title">Profil</AppText>
+        <AppText variant="title">{t("profile")}</AppText>
 
         {/* Profile card */}
         <Card style={{ marginTop: spacing.lg, flexDirection: "row", alignItems: "center", gap: spacing.md }}>
@@ -64,7 +71,7 @@ export default function Profile() {
             </AppText>
           </View>
           <View style={{ flex: 1 }}>
-            <AppText variant="section">{user?.name || "Saklio Kullanıcısı"}</AppText>
+            <AppText variant="section">{user?.name || t("saklioUser")}</AppText>
             <AppText variant="body" color={colors.mutedText}>
               {user?.email}
             </AppText>
@@ -101,7 +108,7 @@ export default function Profile() {
 
         {/* Connected accounts */}
         <AppText variant="caption" color={colors.mutedText} style={styles.sectionLabel}>
-          BAĞLI HESAPLAR
+          {t("connectedAccounts")}
         </AppText>
         <View style={[styles.list, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginTop: spacing.sm }]}>
           {connectRows.map((r, i) => (
@@ -117,7 +124,7 @@ export default function Profile() {
               </AppText>
               <View style={[styles.soonBadge, { backgroundColor: colors.surfaceTertiary }]}>
                 <AppText variant="caption" color={colors.brandDark} weight="semibold">
-                  Yakında
+                  {t("soon")}
                 </AppText>
               </View>
             </View>
@@ -126,7 +133,7 @@ export default function Profile() {
 
         {/* Data & privacy */}
         <AppText variant="caption" color={colors.mutedText} style={styles.sectionLabel}>
-          VERİLERİM
+          {t("myData")}
         </AppText>
         <View style={[styles.list, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginTop: spacing.sm }]}>
           <Pressable

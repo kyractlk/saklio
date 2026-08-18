@@ -21,6 +21,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const imgUrl = useFileUrl(product?.image_path);
+  const heroUrl = imgUrl || product?.image_url || null;
 
   const load = useCallback(async () => {
     try {
@@ -85,8 +86,8 @@ export default function ProductDetail() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Hero */}
         <View style={styles.hero}>
-          {imgUrl ? (
-            <Image source={{ uri: imgUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          {heroUrl ? (
+            <Image source={{ uri: heroUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
           ) : (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: cat.bg, alignItems: "center", justifyContent: "center" }]}>
               <Feather name="package" size={72} color={cat.fg} />

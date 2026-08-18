@@ -12,6 +12,7 @@ import { EmptyBoxIllustration } from "@/src/components/Illustrations";
 import { EmptyState } from "@/src/components/layout";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { useAuth } from "@/src/context/AuthContext";
+import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { formatPrice, daysLabel, haptic } from "@/src/lib/format";
 
@@ -19,6 +20,7 @@ export default function Home() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useT();
   const [data, setData] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,11 +67,9 @@ export default function Home() {
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <AppText variant="title">Merhaba {firstName} 👋</AppText>
+            <AppText variant="title">{t("hello")} {firstName} 👋</AppText>
             <AppText variant="body" color={colors.mutedText} style={{ marginTop: 2 }}>
-              {actNow.length > 0
-                ? `Bugün ilgilenmen gereken ${actNow.length} şey var.`
-                : "Her şey yolunda görünüyor."}
+              {actNow.length > 0 ? t("todoSome", { n: actNow.length }) : t("allGood")}
             </AppText>
           </View>
           <Pressable
@@ -91,7 +91,7 @@ export default function Home() {
         >
           <Feather name="search" size={18} color={colors.mutedText} />
           <AppText variant="body" color={colors.mutedText}>
-            Ürün, mağaza veya fiş ara
+            {t("searchPlaceholder")}
           </AppText>
         </Pressable>
 
@@ -106,9 +106,9 @@ export default function Home() {
             <EmptyState
               testID="home-empty"
               illustration={<EmptyBoxIllustration size={200} brand={colors.brand} ink={colors.onSurface} />}
-              title="Henüz bir şey saklamadın."
-              body="İlk fişini tara, Saklio gerisini halletsin."
-              cta="İlk fişini tara"
+              title={t("emptyHomeT")}
+              body={t("emptyHomeB")}
+              cta={t("scanFirst")}
               onCta={() => router.push("/scan")}
             />
             <Pressable
@@ -121,7 +121,7 @@ export default function Home() {
               style={{ alignItems: "center", marginTop: -20 }}
             >
               <AppText variant="caption" color={colors.mutedText}>
-                Örnek verilerle keşfet
+                {t("exploreDemo")}
               </AppText>
             </Pressable>
           </View>
@@ -131,7 +131,7 @@ export default function Home() {
             {actNow.length > 0 && (
               <View style={{ marginTop: spacing.sm }}>
                 <View style={styles.sectionHead}>
-                  <AppText variant="section">Şimdi ilgilen</AppText>
+                  <AppText variant="section">{t("actNow")}</AppText>
                 </View>
                 <ScrollView
                   horizontal
@@ -157,13 +157,13 @@ export default function Home() {
                   >
                     <View style={{ flex: 1 }}>
                       <AppText variant="body" color={colors.onBrand} style={{ opacity: 0.9 }}>
-                        İade Merkezi
+                        {t("returnCenter")}
                       </AppText>
                       <AppText variant="section" color={colors.onBrand} style={{ marginTop: 4 }}>
-                        {formatPrice(data.returnable_value, data.currency)} değerinde
+                        {t("worthValue", { v: formatPrice(data.returnable_value, data.currency) })}
                       </AppText>
                       <AppText variant="body" color={colors.onBrand} style={{ opacity: 0.9 }}>
-                        {data.returnable_count} ürün hâlâ iade edilebilir
+                        {t("returnableCount", { n: data.returnable_count })}
                       </AppText>
                     </View>
                     <Feather name="arrow-up-right" size={24} color={colors.onBrand} />
@@ -174,16 +174,16 @@ export default function Home() {
 
             {/* Quick actions */}
             <View style={styles.quickRow}>
-              <QuickAction icon="message-circle" label="Saklio Asistan" onPress={() => router.push("/assistant")} />
-              <QuickAction icon="rotate-ccw" label="İade Merkezi" onPress={() => router.push("/return-center")} />
+              <QuickAction icon="message-circle" label={t("assistant")} onPress={() => router.push("/assistant")} />
+              <QuickAction icon="rotate-ccw" label={t("returnCenter")} onPress={() => router.push("/return-center")} />
             </View>
 
             {/* Recent */}
             <View style={styles.sectionHead}>
-              <AppText variant="section">Son eklenenler</AppText>
+              <AppText variant="section">{t("recent")}</AppText>
               <Pressable onPress={() => router.push("/(tabs)/stuff")}>
                 <AppText variant="body" color={colors.brandDark}>
-                  Tümü
+                  {t("all")}
                 </AppText>
               </Pressable>
             </View>
@@ -201,6 +201,7 @@ export default function Home() {
 
 function ActNowCard({ product, onPress, index }: { product: any; onPress: () => void; index: number }) {
   const { colors } = useTheme();
+  const { t } = useT();
   const days = product.return_days_left ?? product.warranty_days_left ?? 0;
   const isReturn = product.return_status === "ending";
   const total = isReturn ? product.return_days || 14 : (product.warranty_months || 24) * 30;
@@ -223,13 +224,13 @@ function ActNowCard({ product, onPress, index }: { product: any; onPress: () => 
           progress={progress}
           color={ringColor}
           label={`${Math.max(0, days)}`}
-          sublabel="gün"
+          sublabel={t("days")}
         />
         <AppText variant="card" numberOfLines={2} style={{ marginTop: spacing.sm }}>
           {product.name}
         </AppText>
         <AppText variant="caption" color={colors.mutedText}>
-          {isReturn ? "İade süresi bitiyor" : "Garanti bitiyor"}
+          {isReturn ? t("returnEnding") : t("warrantyEnding")}
         </AppText>
         <AppText variant="body" weight="semibold" style={{ marginTop: 4, fontVariant: ["tabular-nums"] }}>
           {formatPrice(product.price, product.currency)}

@@ -34,19 +34,22 @@ export function useFileUrl(path?: string | null) {
 
 export function ProductThumb({
   path,
+  imageUrl,
   category,
   size = 64,
 }: {
   path?: string | null;
+  imageUrl?: string | null;
   category: string;
   size?: number;
 }) {
   const url = useFileUrl(path);
+  const finalUrl = url || imageUrl || null;
   const cat = CATEGORY_COLORS[category] || CATEGORY_COLORS.diger;
-  if (url) {
+  if (finalUrl) {
     return (
       <Image
-        source={{ uri: url }}
+        source={{ uri: finalUrl }}
         style={{ width: size, height: size, borderRadius: radius.md }}
         contentFit="cover"
         transition={200}
@@ -117,7 +120,7 @@ export function ProductCard({
           },
         ]}
       >
-        <ProductThumb path={product.image_path} category={product.category} size={64} />
+        <ProductThumb path={product.image_path} imageUrl={product.image_url} category={product.category} size={64} />
         <View style={{ flex: 1 }}>
           <AppText variant="card" numberOfLines={1}>
             {product.name}

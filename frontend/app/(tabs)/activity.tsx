@@ -9,22 +9,24 @@ import { AppText, Skeleton } from "@/src/components/ui";
 import { ProductThumb } from "@/src/components/ProductCard";
 import { ShieldIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
+import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { formatPrice, daysLabel, haptic } from "@/src/lib/format";
 
 const MODES = [
-  { key: "return", label: "İade Merkezi" },
-  { key: "warranty", label: "Garantilerim" },
+  { key: "return", label: "returnCenter" },
+  { key: "warranty", label: "warranties" },
 ];
 const STATUS = [
-  { key: "active", label: "Aktif" },
-  { key: "ending", label: "Yakında bitecek" },
-  { key: "expired", label: "Süresi dolmuş" },
+  { key: "active", label: "active" },
+  { key: "ending", label: "endingSoon" },
+  { key: "expired", label: "expired" },
 ];
 
 export default function Activity() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useT();
   const [mode, setMode] = useState("return");
   const [status, setStatus] = useState("active");
   const [products, setProducts] = useState<any[]>([]);
@@ -62,7 +64,7 @@ export default function Activity() {
     <Screen>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <AppText variant="title">Aktiviteler</AppText>
+          <AppText variant="title">{t("activity")}</AppText>
           <IconButton
             name="bell"
             testID="open-notifications"
@@ -86,7 +88,7 @@ export default function Activity() {
                 style={[styles.segItem, active && { backgroundColor: colors.brand }]}
               >
                 <AppText variant="body" weight="semibold" color={active ? colors.onBrand : colors.mutedText}>
-                  {m.label}
+                  {t(m.label)}
                 </AppText>
               </Pressable>
             );
@@ -119,7 +121,7 @@ export default function Activity() {
                 ]}
               >
                 <AppText variant="caption" weight="medium" color={active ? colors.onBrand : colors.mutedText}>
-                  {s.label}
+                  {t(s.label)}
                 </AppText>
               </Pressable>
             );
@@ -144,7 +146,7 @@ export default function Activity() {
               <LinearGradient colors={[colors.brand, colors.brandDark]} style={styles.summary}>
                 <Feather name="rotate-ccw" size={22} color={colors.onBrand} />
                 <AppText variant="body" color={colors.onBrand} style={{ flex: 1 }}>
-                  Toplam {formatPrice(summaryValue, "TL")} değerinde ürün hâlâ iade edilebilir.
+                  {t("totalReturnable", { v: formatPrice(summaryValue, "TL") })}
                 </AppText>
               </LinearGradient>
             ) : null
@@ -153,8 +155,8 @@ export default function Activity() {
             <View style={{ paddingTop: 40 }}>
               <EmptyState
                 illustration={<ShieldIllustration size={160} brand={colors.brand} ink={colors.onSurface} />}
-                title={mode === "return" ? "Bu durumda ürün yok" : "Bu durumda garanti yok"}
-                body="Her şey yolunda görünüyor."
+                title={mode === "return" ? t("noneHereT_r") : t("noneHereT_w")}
+                body={t("allGood")}
               />
             </View>
           }
@@ -176,6 +178,7 @@ export default function Activity() {
 
 function ActivityRow({ product, mode, onPress, index }: any) {
   const { colors } = useTheme();
+  const { t } = useT();
   const days = mode === "return" ? product.return_days_left : product.warranty_days_left;
   const color =
     days < 0 ? colors.mutedText : days <= 5 ? colors.error : days <= 30 ? colors.warning : colors.success;
@@ -189,7 +192,7 @@ function ActivityRow({ product, mode, onPress, index }: any) {
         }}
         style={[styles.row, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
       >
-        <ProductThumb path={product.image_path} category={product.category} size={56} />
+        <ProductThumb path={product.image_path} imageUrl={product.image_url} category={product.category} size={56} />
         <View style={{ flex: 1 }}>
           <AppText variant="card" numberOfLines={1}>
             {product.name}
@@ -200,7 +203,7 @@ function ActivityRow({ product, mode, onPress, index }: any) {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
             <AppText variant="caption" color={color} weight="semibold">
-              {mode === "return" ? "İade: " : "Garanti: "}
+              {mode === "return" ? t("returnLabel") : t("warrantyLabel")}
               {daysLabel(days)}
             </AppText>
           </View>

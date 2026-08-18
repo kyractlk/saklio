@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
 import { ThemeProvider } from "@/src/theme";
+import { LanguageProvider } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { setMoneyConfig } from "@/src/lib/format";
 import { registerForPush } from "@/src/lib/push";
@@ -88,7 +89,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <KeyboardProvider>
           <AuthProvider>
-            <ThemedStack />
+            <LanguageProvider>
+              <ThemedStack />
+            </LanguageProvider>
           </AuthProvider>
         </KeyboardProvider>
       </SafeAreaProvider>

@@ -7,6 +7,7 @@ import { AppText, Skeleton, Chip } from "@/src/components/ui";
 import { ProductCard, ProductThumb, StatusChips } from "@/src/components/ProductCard";
 import { EmptyBoxIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius, CATEGORY_LABELS } from "@/src/theme";
+import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { formatPrice, haptic } from "@/src/lib/format";
 
@@ -15,6 +16,7 @@ const CATEGORIES = ["tumu", "elektronik", "moda", "ev", "otomotiv", "diger"];
 export default function MyStuff() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t, tc } = useT();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("tumu");
@@ -40,7 +42,7 @@ export default function MyStuff() {
       {/* Sticky header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <AppText variant="title">Eşyalarım</AppText>
+          <AppText variant="title">{t("myStuff")}</AppText>
           <Pressable
             testID="view-toggle"
             onPress={() => {
@@ -81,7 +83,7 @@ export default function MyStuff() {
                   color={active ? colors.onBrand : colors.mutedText}
                   weight="medium"
                 >
-                  {CATEGORY_LABELS[c]}
+                  {tc(c)}
                 </AppText>
               </Pressable>
             );
@@ -99,9 +101,9 @@ export default function MyStuff() {
         <EmptyState
           testID="stuff-empty"
           illustration={<EmptyBoxIllustration size={180} brand={colors.brand} ink={colors.onSurface} />}
-          title="Bu kategoride ürün yok"
-          body="Yeni bir fiş tarayarak eşyalarını eklemeye başla."
-          cta="Fiş tara"
+          title={t("emptyCatT")}
+          body={t("emptyCatB")}
+          cta={t("scan")}
           onCta={() => router.push("/scan")}
         />
       ) : grid ? (
@@ -121,7 +123,7 @@ export default function MyStuff() {
               }}
               style={[styles.gridCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
             >
-              <ProductThumb path={item.image_path} category={item.category} size={150} />
+              <ProductThumb path={item.image_path} imageUrl={item.image_url} category={item.category} size={150} />
               <AppText variant="card" numberOfLines={1} style={{ marginTop: spacing.sm }}>
                 {item.name}
               </AppText>

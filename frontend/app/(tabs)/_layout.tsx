@@ -8,14 +8,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { useTheme, radius } from "@/src/theme";
 import { AppText } from "@/src/components/ui";
+import { useT } from "@/src/i18n";
 import { haptic } from "@/src/lib/format";
 
-const TABS = [
-  { name: "index", label: "Ana Sayfa", icon: "home" },
-  { name: "stuff", label: "Eşyalarım", icon: "grid" },
-  { name: "activity", label: "Aktiviteler", icon: "bell" },
-  { name: "profile", label: "Profil", icon: "user" },
-];
+const TAB_KEYS: Record<string, string> = {
+  index: "tab_home", stuff: "tab_stuff", activity: "tab_activity", profile: "tab_profile",
+};
+const TAB_ICON: Record<string, string> = { index: "home", stuff: "grid", activity: "bell", profile: "user" };
 
 function CustomTabBar({ state, navigation }: any) {
   const { colors, isDark } = useTheme();
@@ -66,7 +65,7 @@ function CustomTabBar({ state, navigation }: any) {
 
 function TabItem({ route, state, navigation }: any) {
   const { colors } = useTheme();
-  const meta = TABS.find((t) => t.name === route.name)!;
+  const { t } = useT();
   const focused = state.routes[state.index].name === route.name;
   return (
     <Pressable
@@ -78,13 +77,13 @@ function TabItem({ route, state, navigation }: any) {
         if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
       }}
     >
-      <Feather name={meta.icon as any} size={22} color={focused ? colors.brandDark : colors.tabInactive} />
+      <Feather name={TAB_ICON[route.name] as any} size={22} color={focused ? colors.brandDark : colors.tabInactive} />
       <AppText
         variant="caption"
         color={focused ? colors.brandDark : colors.tabInactive}
         style={{ fontSize: 10, marginTop: 3 }}
       >
-        {meta.label}
+        {t(TAB_KEYS[route.name])}
       </AppText>
     </Pressable>
   );

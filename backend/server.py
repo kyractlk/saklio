@@ -8,6 +8,7 @@ import os
 import re
 import json
 import base64
+import asyncio
 import logging
 import uuid
 import requests
@@ -267,6 +268,38 @@ def compute_status(product: dict) -> dict:
     return out
 
 
+# ----------------------------------------------------------------------------
+# Auto product image (best-effort web image lookup)
+# ----------------------------------------------------------------------------
+def _fetch_image_url(query: str) -> Optional[str]:
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"}
+        url = "https://www.bing.com/images/search?q=" + requests.utils.quote(query + " ürün") + "&form=HDRSC2&first=1"
+        r = requests.get(url, headers=headers, timeout=12)
+        if r.status_code != 200:
+            return None
+        # murl":"https://..."
+        candidates = re.findall(r'murl&quot;:&quot;(https?://[^&"]+?)&quot;', r.text)
+        if not candidates:
+            candidates = re.findall(r'"murl":"(https?://[^"]+?)"', r.text)
+        for c in candidates:
+            cl = c.lower()
+            if cl.startswith("https://") and (".jpg" in cl or ".jpeg" in cl or ".png" in cl or ".webp" in cl):
+                return c.replace("\\/", "/")
+        return None
+    except Exception as e:
+        logger.warning(f"image lookup failed: {e}")
+        return None
+
+
+async def _attach_image(product_id: str, owner_id: str, query: str):
+    if not query:
+        return
+    url = await run_in_threadpool(_fetch_image_url, query)
+    if url:
+        await db.products.update_one({"id": product_id, "owner_id": owner_id}, {"$set": {"image_url": url}})
+
+
 def clean(doc: dict) -> dict:
     doc = dict(doc)
     doc.pop("_id", None)
@@ -394,6 +427,8 @@ async def create_product(inp: ProductInput, user=Depends(get_current_user)):
         product["purchase_date"] = now_iso()
     product["created_at"] = now_iso()
     await db.products.insert_one(product)
+    if not product.get("image_path"):
+        asyncio.create_task(_attach_image(product["id"], user["id"], product.get("name", "")))
     return enrich(product)
 
 
@@ -874,6 +909,7 @@ async def gmail_import(user=Depends(get_current_user)):
             "items": [], "created_at": now_iso(), "source": "gmail",
         }
         await db.products.insert_one(product)
+        asyncio.create_task(_attach_image(product["id"], user["id"], product["name"]))
         created.append(enrich(product))
     return {"imported": len(created), "products": created}
 

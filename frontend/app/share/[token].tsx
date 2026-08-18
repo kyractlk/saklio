@@ -82,7 +82,7 @@ export default function ShareImport() {
           <Animated.View entering={FadeInDown.duration(400)}>
             <Card>
               <View style={{ flexDirection: "row", gap: spacing.md, alignItems: "center" }}>
-                <ProductThumb path={p.image_path} category={p.category} size={72} />
+                <ProductThumb path={p.image_path} imageUrl={p.image_url} category={p.category} size={72} />
                 <View style={{ flex: 1 }}>
                   <AppText variant="card" numberOfLines={2}>
                     {p.name}
