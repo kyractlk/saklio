@@ -48,10 +48,18 @@ export async function registerForPush(userId: string): Promise<string | null> {
       (Constants.expoConfig as any)?.extra?.eas?.projectId ??
       (Constants as any)?.easConfig?.projectId;
 
-    const tokenResp = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    );
-    const token = tokenResp.data;
+    // Bazı projelerde (özellikle EAS projectId yanlış/eksikse) { projectId } ile token alamayabiliyoruz.
+    // O durumda projectId'siz ikinci deneme yapıyoruz.
+    let token: string | null = null;
+    try {
+      const tokenResp = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+      token = tokenResp.data || null;
+    } catch {}
+    if (!token) {
+      const tokenResp = await Notifications.getExpoPushTokenAsync();
+      token = tokenResp.data || null;
+    }
+    if (!token) return null;
 
     await api.registerPush({
       user_id: userId,
