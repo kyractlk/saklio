@@ -11,9 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.saklio",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Fişlerini taramak için kamera erişimi",
-        "NSPhotoLibraryUsageDescription": "Fiş ve ürün fotoğraflarını seçmek için"
+        "NSPhotoLibraryUsageDescription": "Fiş ve ürün fotoğraflarını seçmek için",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -31,7 +33,7 @@
         "android.permission.VIBRATE",
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "bundler": "metro",

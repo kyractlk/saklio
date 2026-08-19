@@ -17,6 +17,10 @@
       "android": {
         "buildType": "app-bundle"
       },
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "distribution": "store",
       "autoIncrement": true,
       "env": {
         "EAS_SKIP_AUTO_FINGERPRINT": "1"
