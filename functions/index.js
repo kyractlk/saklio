@@ -555,8 +555,12 @@ exports.sendMyEmail = onCall(
       attachments.push({ filename: name, content, contentType: attach.type || "text/html; charset=utf-8" });
     }
     if (createPdf) {
-      const pdfBuffer = await makePdfAttachmentFromHtml(htmlBody, subject);
-      attachments.push({ filename: pdfFilename, content: pdfBuffer, contentType: "application/pdf" });
+      try {
+        const pdfBuffer = await makePdfAttachmentFromHtml(htmlBody, subject);
+        attachments.push({ filename: pdfFilename, content: pdfBuffer, contentType: "application/pdf" });
+      } catch (e) {
+        console.error("PDF creation failed:", e);
+      }
     }
     await sendMail({
       pass: smtpPass.value(),
@@ -656,13 +660,18 @@ exports.exportMyData = onCall({ secrets: [smtpPass], enforceAppCheck: false, tim
   if (sendEmail) {
     const htmlFromClient = String(request.data?.html || "");
     const htmlBody = htmlFromClient.length > 80 ? htmlFromClient.slice(0, 400_000) : exportReadyHtml(lang, counts);
-    const pdfBuffer = await makePdfAttachmentFromHtml(htmlBody, "Saklio Export");
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await makePdfAttachmentFromHtml(htmlBody, "Saklio Export");
+    } catch (e) {
+      console.error("exportMyData PDF creation failed:", e);
+    }
     await sendMail({
       pass: smtpPass.value(),
       to,
       subject: lang === "en" ? "Your Saklio data export" : "Saklio veri dışa aktarma",
       html: htmlBody,
-      attachments: [{ filename: "saklio-export.pdf", content: pdfBuffer, contentType: "application/pdf" }],
+      attachments: pdfBuffer ? [{ filename: "saklio-export.pdf", content: pdfBuffer, contentType: "application/pdf" }] : undefined,
     });
   }
   return { sent: sendEmail, email: to, counts, payload };
