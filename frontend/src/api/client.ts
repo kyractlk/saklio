@@ -508,6 +508,16 @@ export const api = {
     return (await fn({ ...body, lang: getLang() })).data;
   },
 
+  async sendPasswordResetCode(email: string) {
+    const fn = httpsCallable(functions, "sendPasswordResetCode");
+    return (await fn({ email, lang: getLang() })).data;
+  },
+
+  async confirmPasswordResetCode(email: string, code: string, password: string) {
+    const fn = httpsCallable(functions, "confirmPasswordResetCode");
+    return (await fn({ email, code, password })).data;
+  },
+
   async sendWelcomeEmail(name?: string) {
     const fn = httpsCallable(functions, "sendWelcomeEmail");
     return (await fn({ name, lang: getLang() })).data;

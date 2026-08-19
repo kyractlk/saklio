@@ -99,5 +99,24 @@ function bannedHtml(lang) {
   return emailShell(lang, title, `<p style="margin:0;color:#757D78;line-height:22px;">${escapeHtml(body)}</p>`);
 }
 
-module.exports = { emailShell, welcomeEmailHtml, deleteCodeEmailHtml, reminderEmailHtml, exportReadyHtml, bannedHtml };
+function passwordResetEmailHtml(lang, code) {
+  const title = copy(lang, "Şifre sıfırlama kodu", "Password reset code");
+  const body = copy(
+    lang,
+    "Saklio şifreni sıfırlamak için aşağıdaki kodu kullan. Kod 15 dakika geçerlidir. Bu isteği sen yapmadıysan bu e-postayı yoksay.",
+    "Use the code below to reset your Saklio password. The code expires in 15 minutes. If you didn't request this, ignore this email."
+  );
+  const label = copy(lang, "Sıfırlama kodun", "Your reset code");
+  return emailShell(
+    lang,
+    title,
+    `<p style="margin:0 0 18px;color:#757D78;line-height:22px;">${escapeHtml(body)}</p>
+     <div style="background:#F8F7F2;border:1px solid #EAE8DF;border-radius:16px;padding:18px;text-align:center;">
+       <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#757D78;">${escapeHtml(label)}</div>
+       <div style="font-size:32px;letter-spacing:8px;font-weight:700;color:#0E241A;margin-top:8px;">${escapeHtml(code)}</div>
+     </div>`
+  );
+}
+
+module.exports = { emailShell, welcomeEmailHtml, deleteCodeEmailHtml, reminderEmailHtml, exportReadyHtml, bannedHtml, passwordResetEmailHtml };
 

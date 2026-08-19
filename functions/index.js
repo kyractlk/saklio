@@ -10,7 +10,7 @@ admin.initializeApp();
 const openaiKey = defineSecret("OPENAI_API_KEY");
 const smtpPass = defineSecret("SMTP_PASS");
 const { sendMail } = require("./mail");
-const { welcomeEmailHtml, deleteCodeEmailHtml, reminderEmailHtml, exportReadyHtml, bannedHtml } = require("./emails");
+const { welcomeEmailHtml, deleteCodeEmailHtml, reminderEmailHtml, exportReadyHtml, bannedHtml, passwordResetEmailHtml } = require("./emails");
 const crypto = require("crypto");
 
 const LIMITS = {
@@ -715,6 +715,74 @@ exports.adminDeleteUser = onCall({ enforceAppCheck: false }, async (request) => 
     throw new HttpsError("failed-precondition", "Cannot delete the primary admin");
   }
   await wipeUser(target);
+  return { ok: true };
+});
+
+exports.sendPasswordResetCode = onCall({ secrets: [smtpPass], enforceAppCheck: false }, async (request) => {
+  const email = String(request.data?.email || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new HttpsError("invalid-argument", "Valid email required");
+  }
+  let userRecord;
+  try {
+    userRecord = await admin.auth().getUserByEmail(email);
+  } catch {
+    // Güvenlik: e-posta kayıtlı olsun olmasın aynı yanıtı ver
+    return { sent: true };
+  }
+  if (userRecord.disabled) throw new HttpsError("permission-denied", "Account suspended");
+  const uid = userRecord.uid;
+  await enforceRateLimit(uid, "mail");
+  const lang = request.data?.lang === "en" ? "en" : "tr";
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  await admin.firestore().doc(`users/${uid}`).set(
+    {
+      pw_reset_code_hash: hashCode(code),
+      pw_reset_expires: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 15 * 60 * 1000)),
+    },
+    { merge: true }
+  );
+  await sendMail({
+    pass: smtpPass.value(),
+    to: email,
+    subject: lang === "en" ? "Saklio password reset" : "Saklio şifre sıfırlama",
+    html: passwordResetEmailHtml(lang, code),
+    text: `${lang === "en" ? "Your code" : "Kodun"}: ${code}`,
+  });
+  return { sent: true };
+});
+
+exports.confirmPasswordResetCode = onCall({ enforceAppCheck: false }, async (request) => {
+  const email = String(request.data?.email || "").trim().toLowerCase();
+  const code = String(request.data?.code || "").trim();
+  const newPassword = String(request.data?.password || "");
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new HttpsError("invalid-argument", "Valid email required");
+  }
+  if (!/^\d{6}$/.test(code)) throw new HttpsError("invalid-argument", "Invalid code");
+  if (newPassword.length < 6) throw new HttpsError("invalid-argument", "Password too short");
+  let userRecord;
+  try {
+    userRecord = await admin.auth().getUserByEmail(email);
+  } catch {
+    throw new HttpsError("not-found", "User not found");
+  }
+  const uid = userRecord.uid;
+  const ref = admin.firestore().doc(`users/${uid}`);
+  const snap = await ref.get();
+  const data = snap.data() || {};
+  const expires = data.pw_reset_expires?.toDate?.() || new Date(0);
+  if (data.pw_reset_code_hash !== hashCode(code) || expires < new Date()) {
+    throw new HttpsError("failed-precondition", "Code is invalid or expired");
+  }
+  await admin.auth().updateUser(uid, { password: newPassword });
+  await ref.set(
+    {
+      pw_reset_code_hash: admin.firestore.FieldValue.delete(),
+      pw_reset_expires: admin.firestore.FieldValue.delete(),
+    },
+    { merge: true }
+  );
   return { ok: true };
 });
 

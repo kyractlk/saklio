@@ -89,6 +89,13 @@ export default function Login() {
             error={error}
           />
           <Button testID="login-submit" title={t("continueEmail")} onPress={submit} loading={loading} />
+          <Pressable
+            testID="go-forgot"
+            onPress={() => { haptic.light(); router.push("/forgot"); }}
+            style={{ alignItems: "center", marginTop: spacing.sm }}
+          >
+            <AppText variant="caption" color={colors.brandDark}>{t("forgotPassword")}</AppText>
+          </Pressable>
         </Animated.View>
 
         <Pressable
