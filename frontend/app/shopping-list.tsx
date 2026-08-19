@@ -74,9 +74,9 @@ export default function ShoppingList() {
         pdfFilename: "saklio-alisveris.pdf",
       });
       setMsg(t("listMailed"));
-    } catch {
+    } catch (e: any) {
       haptic.error();
-      setMsg(t("listSent"));
+      setMsg(String(e?.message || t("opFailed")));
     } finally {
       setBusy(false);
     }

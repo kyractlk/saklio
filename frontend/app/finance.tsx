@@ -65,9 +65,9 @@ export default function Finance() {
         pdfFilename: `saklio-harcama-${month}.pdf`,
       });
       setMsg(t("financeMailed"));
-    } catch {
+    } catch (e: any) {
       haptic.error();
-      setMsg(t("financeReady"));
+      setMsg(String(e?.message || t("opFailed")));
     } finally {
       setBusy(false);
     }
