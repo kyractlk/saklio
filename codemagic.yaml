@@ -84,15 +84,15 @@ workflows:
     instance_type: mac_mini_m2
     working_directory: frontend
     integrations:
-      app_store_connect: codemagic
+      app_store_connect: codemagic # Codemagic → Integrations → adını buraya yaz
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: app.saklio
+      # ios_signing bloğu KULLANMA — manuel profil arar ve "No matching profiles" hatası verir.
+      # App Store Connect API ile otomatik sertifika/profil oluşturulur (fetch-signing-files).
       vars:
+        BUNDLE_ID: "app.saklio"
         XCODE_WORKSPACE: "Saklio.xcworkspace"
         XCODE_SCHEME: "Saklio"
-        APP_ID: "0000000000" # App Store Connect → App → General → Apple ID
+        APP_ID: "0000000000" # App Store Connect → App → General → Apple ID (sayı)
       node: v22.13.1
       xcode: latest
       cocoapods: default
@@ -106,9 +106,21 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios && pod install
-      - name: Code signing
+      - name: Set up keychain
         script: |
-          xcode-project use-profiles --warn-only
+          keychain initialize
+      - name: Fetch signing files (App Store)
+        script: |
+          set -e
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles
       - name: Increment build number
         script: |
           cd ios
