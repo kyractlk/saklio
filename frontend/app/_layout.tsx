@@ -1,11 +1,12 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { LogBox } from "react-native";
+import { LogBox, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { StatusBar } from "expo-status-bar";
+import * as NavigationBar from "expo-navigation-bar";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
@@ -84,6 +85,16 @@ export default function RootLayout() {
       // icon fonts ready; ThemedStack hides splash once auth resolves
     }
   }, [loaded, error]);
+
+  // Android'de sistem alt navigation bar'ını (geri/son uygulamalar) uygulama açıkken gizle.
+  // Bu sayede kendi alt tab menümüz altta takılmadan görünür.
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    NavigationBar.setVisibilityAsync("hidden").catch(() => {});
+    return () => {
+      NavigationBar.setVisibilityAsync("visible").catch(() => {});
+    };
+  }, []);
 
   if (!loaded && !error) return null;
 
