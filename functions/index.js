@@ -12,6 +12,7 @@ const smtpPass = defineSecret("SMTP_PASS");
 const { sendMail } = require("./mail");
 const { welcomeEmailHtml, deleteCodeEmailHtml, reminderEmailHtml, exportReadyHtml, bannedHtml, passwordResetEmailHtml } = require("./emails");
 const crypto = require("crypto");
+const PDFDocument = require("pdfkit");
 
 const LIMITS = {
   scan: { perMin: 4, perDay: 25 },
@@ -19,6 +20,46 @@ const LIMITS = {
   claim: { perMin: 3, perDay: 15 },
   mail: { perMin: 3, perDay: 20 },
 };
+
+function htmlToPlainText(html) {
+  return String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<\/(p|div|br|li|h1|h2|h3|tr|td|th)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim()
+    .slice(0, 200_000);
+}
+
+async function makePdfAttachmentFromHtml(html, title) {
+  const plain = htmlToPlainText(html);
+  return await new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: "A4", margin: 48 });
+      const chunks = [];
+      doc.on("data", (c) => chunks.push(c));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+
+      doc.fontSize(18).text(String(title || "Saklio"), { align: "left" });
+      doc.moveDown();
+      doc.fontSize(11).text(plain || "—", { width: 500 });
+      doc.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
 function normalizeCategory(cat) {
   const allowed = ["elektronik", "moda", "ev", "otomotiv", "gida", "saglik", "ulasim", "fatura", "eglence", "diger"];
@@ -503,6 +544,9 @@ exports.sendMyEmail = onCall(
     const html = String(request.data?.html || "").slice(0, 400_000);
     const text = String(request.data?.text || "").slice(0, 50_000);
     if (html.length < 40 && text.length < 10) throw new HttpsError("invalid-argument", "Email body required");
+    const htmlBody = html || `<pre>${text}</pre>`;
+    const createPdf = request.data?.createPdf === true;
+    const pdfFilename = String(request.data?.pdfFilename || "saklio-rapor.pdf").slice(0, 120);
     const attachments = [];
     const attach = request.data?.attachment;
     if (attach?.filename && attach?.content) {
@@ -510,11 +554,15 @@ exports.sendMyEmail = onCall(
       const content = String(attach.content).slice(0, 800_000);
       attachments.push({ filename: name, content, contentType: attach.type || "text/html; charset=utf-8" });
     }
+    if (createPdf) {
+      const pdfBuffer = await makePdfAttachmentFromHtml(htmlBody, subject);
+      attachments.push({ filename: pdfFilename, content: pdfBuffer, contentType: "application/pdf" });
+    }
     await sendMail({
       pass: smtpPass.value(),
       to,
       subject,
-      html: html || `<pre>${text}</pre>`,
+      html: htmlBody,
       text,
       attachments,
     });
@@ -607,14 +655,14 @@ exports.exportMyData = onCall({ secrets: [smtpPass], enforceAppCheck: false, tim
   const counts = { products: products.size, documents: documents.size, shopping: shopping.size };
   if (sendEmail) {
     const htmlFromClient = String(request.data?.html || "");
+    const htmlBody = htmlFromClient.length > 80 ? htmlFromClient.slice(0, 400_000) : exportReadyHtml(lang, counts);
+    const pdfBuffer = await makePdfAttachmentFromHtml(htmlBody, "Saklio Export");
     await sendMail({
       pass: smtpPass.value(),
       to,
       subject: lang === "en" ? "Your Saklio data export" : "Saklio veri dışa aktarma",
-      html: htmlFromClient.length > 80 ? htmlFromClient.slice(0, 400_000) : exportReadyHtml(lang, counts),
-      attachments: [
-        { filename: "saklio-export.json", content: JSON.stringify(payload, null, 2), contentType: "application/json" },
-      ],
+      html: htmlBody,
+      attachments: [{ filename: "saklio-export.pdf", content: pdfBuffer, contentType: "application/pdf" }],
     });
   }
   return { sent: sendEmail, email: to, counts, payload };

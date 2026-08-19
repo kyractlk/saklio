@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Alert } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -12,7 +12,6 @@ import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
 import { haptic } from "@/src/lib/format";
 import { useT } from "@/src/i18n";
-import { exportReportHtml, downloadHtmlFile, downloadJsonFile } from "@/src/lib/email-templates";
 
 export default function DataScreen() {
   const { colors } = useTheme();
@@ -27,27 +26,6 @@ export default function DataScreen() {
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-
-  const doExportDownload = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res: any = await api.exportData({ sendEmail: false });
-      haptic.success();
-      if (res.payload) {
-        const html = exportReportHtml(lang, res.payload);
-        downloadHtmlFile("saklio-export.html", html);
-        downloadJsonFile("saklio-export.json", res.payload);
-      }
-      setStep("done");
-      setMsg(t("exportReady", { products: res.counts?.products || 0, documents: res.counts?.documents || 0 }));
-    } catch (e: any) {
-      haptic.error();
-      setError(e.message || t("opFailed"));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const doExportEmail = async () => {
     setLoading(true);
@@ -164,13 +142,8 @@ export default function DataScreen() {
               {!isDelete ? (
                 <Button
                   testID="do-export"
-                  title={t("exportTitle")}
-                  onPress={() => {
-                    Alert.alert(t("exportTitle"), t("exportChooseInfo"), [
-                      { text: t("exportDownloadBtn"), onPress: doExportDownload },
-                      { text: t("sendMyData"), onPress: doExportEmail },
-                    ]);
-                  }}
+                  title={t("sendMyData")}
+                  onPress={doExportEmail}
                   loading={loading}
                 />
               ) : step === "intro" ? (

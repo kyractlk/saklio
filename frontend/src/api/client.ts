@@ -503,7 +503,16 @@ export const api = {
     return (await fn({ code })).data;
   },
 
-  async sendMyEmail(body: { subject: string; html: string; text?: string; attachment?: { filename: string; content: string; type?: string } }) {
+  async sendMyEmail(
+    body: {
+      subject: string;
+      html: string;
+      text?: string;
+      attachment?: { filename: string; content: string; type?: string };
+      createPdf?: boolean;
+      pdfFilename?: string;
+    }
+  ) {
     const fn = httpsCallable(functions, "sendMyEmail", { timeout: 60000 });
     return (await fn({ ...body, lang: getLang() })).data;
   },

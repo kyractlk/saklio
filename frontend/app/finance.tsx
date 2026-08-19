@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, Pressable, StyleSheet, ScrollView, Share, Platform } from "react-native";
+import { View, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Screen, Header, EmptyState } from "@/src/components/layout";
@@ -11,7 +11,7 @@ import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { formatPrice, haptic } from "@/src/lib/format";
 import { spendSummary, ymKey, shiftMonth, formatMonthLabel } from "@/src/lib/spend";
-import { spendingReportHtml, spendingReportText, downloadHtmlFile } from "@/src/lib/email-templates";
+import { spendingReportHtml, spendingReportText } from "@/src/lib/email-templates";
 
 export default function Finance() {
   const { colors } = useTheme();
@@ -52,17 +52,6 @@ export default function Finance() {
     })),
   };
 
-  const download = async () => {
-    haptic.medium();
-    const html = spendingReportHtml(lang, reportPayload);
-    if (Platform.OS === "web") {
-      downloadHtmlFile(`saklio-harcama-${month}.html`, html);
-    } else {
-      await Share.share({ message: spendingReportText(lang, reportPayload), title: t("finance") });
-    }
-    setMsg(t("financeReady"));
-  };
-
   const emailMe = async () => {
     haptic.medium();
     const html = spendingReportHtml(lang, reportPayload);
@@ -72,9 +61,9 @@ export default function Finance() {
         subject: `${t("finance")} · ${monthLabel}`,
         html,
         text: spendingReportText(lang, reportPayload),
-        attachment: { filename: `saklio-harcama-${month}.html`, content: html, type: "text/html; charset=utf-8" },
+        createPdf: true,
+        pdfFilename: `saklio-harcama-${month}.pdf`,
       });
-      if (Platform.OS === "web") downloadHtmlFile(`saklio-harcama-${month}.html`, html);
       setMsg(t("financeMailed"));
     } catch {
       haptic.error();
@@ -172,7 +161,6 @@ export default function Finance() {
         )}
 
         <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
-          <Button title={t("downloadFinance")} onPress={download} disabled={busy} />
           <Button title={t("emailFinance")} variant="secondary" onPress={emailMe} disabled={busy} />
           {msg ? (
             <AppText variant="caption" color={colors.mutedText} style={{ textAlign: "center" }}>

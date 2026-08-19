@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Pressable, StyleSheet, FlatList, Share, Platform } from "react-native";
+import { View, Pressable, StyleSheet, FlatList } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Screen, Header, EmptyState } from "@/src/components/layout";
@@ -10,7 +10,7 @@ import { useTheme, spacing, radius } from "@/src/theme";
 import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { haptic } from "@/src/lib/format";
-import { shoppingListHtml, shoppingListText, downloadHtmlFile } from "@/src/lib/email-templates";
+import { shoppingListHtml, shoppingListText } from "@/src/lib/email-templates";
 
 export default function ShoppingList() {
   const { colors } = useTheme();
@@ -61,17 +61,6 @@ export default function ShoppingList() {
 
   const payload = items.map((i) => ({ name: i.name, qty: i.qty, checked: i.checked }));
 
-  const download = async () => {
-    haptic.medium();
-    const html = shoppingListHtml(lang, payload);
-    if (Platform.OS === "web") {
-      downloadHtmlFile("saklio-shopping-list.html", html);
-    } else {
-      await Share.share({ message: shoppingListText(lang, payload), title: t("shoppingList") });
-    }
-    setMsg(t("listSent"));
-  };
-
   const emailMe = async () => {
     haptic.medium();
     const html = shoppingListHtml(lang, payload);
@@ -81,9 +70,9 @@ export default function ShoppingList() {
         subject: t("shoppingList"),
         html,
         text: shoppingListText(lang, payload),
-        attachment: { filename: "saklio-alisveris.html", content: html, type: "text/html; charset=utf-8" },
+        createPdf: true,
+        pdfFilename: "saklio-alisveris.pdf",
       });
-      if (Platform.OS === "web") downloadHtmlFile("saklio-shopping-list.html", html);
       setMsg(t("listMailed"));
     } catch {
       haptic.error();
@@ -139,7 +128,6 @@ export default function ShoppingList() {
             <Input testID="shop-qty" label={t("qty")} value={qty} onChangeText={setQty} placeholder="1" />
             <Button testID="shop-add" title={t("addItem")} onPress={add} />
             <Button testID="shop-mail" title={t("emailMeList")} variant="secondary" onPress={emailMe} loading={busy} />
-            <Button testID="shop-dl" title={t("downloadList")} variant="ghost" onPress={download} />
             {msg ? (
               <AppText variant="caption" color={colors.brandDark} style={{ textAlign: "center" }}>
                 {msg}
