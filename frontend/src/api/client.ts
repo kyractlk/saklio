@@ -23,6 +23,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions, storageBucket } from "@/src/lib/firebase";
+import { SITE_URL } from "@/src/lib/site";
 import { getLang, L } from "@/src/lib/format";
 
 export const TOKEN_KEY = "saklio_token";
@@ -248,8 +249,10 @@ export const api = {
       return_days: body.return_days ?? 14,
       warranty_months: body.warranty_months ?? 24,
       image_path: body.image_path || null,
+      image_url: body.image_url || null,
       receipt_path: body.receipt_path || null,
-      items: Array.isArray(body.items) ? body.items.slice(0, 40) : [],
+      receipt_batch_id: body.receipt_batch_id || null,
+      items: Array.isArray(body.items) ? body.items.slice(0, 50) : [],
       note: body.note || null,
       notify_return: body.notify_return !== false,
       notify_warranty: body.notify_warranty !== false,
@@ -258,6 +261,56 @@ export const api = {
     };
     const added = await addDoc(productsCol(), payload);
     return productFromDoc(await getDoc(added));
+  },
+
+  async createProductsFromReceipt(body: {
+    merchant?: string | null;
+    purchase_date?: string | null;
+    currency?: string;
+    return_days?: number;
+    warranty_months?: number;
+    receipt_path?: string | null;
+    products: Array<{
+      name: string;
+      price?: number | null;
+      category?: string;
+      return_days?: number;
+      warranty_months?: number;
+      image_url?: string | null;
+      qty?: number;
+    }>;
+  }) {
+    const batchId = `rcpt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const created: any[] = [];
+    for (const p of (body.products || []).slice(0, 50)) {
+      const product = await api.createProduct({
+        name: p.name,
+        merchant: body.merchant,
+        category: p.category || "diger",
+        price: p.price ?? null,
+        currency: body.currency || "TL",
+        purchase_date: body.purchase_date,
+        return_days: p.return_days ?? body.return_days ?? 14,
+        warranty_months: p.warranty_months ?? body.warranty_months ?? 24,
+        receipt_path: body.receipt_path || null,
+        receipt_batch_id: batchId,
+        image_path: null,
+        image_url: p.image_url || null,
+        source: "scan",
+      });
+      created.push(product);
+    }
+    return { products: created, receipt_batch_id: batchId };
+  },
+
+  async lookupProductImages(items: Array<{ name: string }>, merchant?: string | null) {
+    const fn = httpsCallable(functions, "lookupProductImages", { timeout: 120000 });
+    const res = await fn({
+      items: items.map((it) => ({ name: it.name })),
+      merchant: merchant || "",
+      lang: getLang(),
+    });
+    return res.data as { results: Array<{ name: string; image_url: string | null }>; found: number };
   },
 
   async updateProduct(id: string, body: any) {
@@ -400,7 +453,7 @@ export const api = {
       },
       created_at: serverTimestamp(),
     });
-    return { token, deeplink: `https://sakliov2.web.app/share/${token}` };
+    return { token, deeplink: `${SITE_URL}/share/${token}` };
   },
 
   async getShare(token: string) {

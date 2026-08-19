@@ -73,8 +73,8 @@ service cloud.firestore {
       return data.keys().hasAll(['name', 'owner_id', 'category', 'created_at', 'return_days', 'warranty_months'])
         && data.keys().hasOnly([
           'name', 'owner_id', 'merchant', 'category', 'price', 'currency', 'purchase_date',
-          'return_days', 'warranty_months', 'image_path', 'receipt_path', 'items', 'note',
-          'notify_return', 'notify_warranty', 'created_at', 'source'
+          'return_days', 'warranty_months', 'image_path', 'image_url', 'receipt_path', 'receipt_batch_id',
+          'items', 'note', 'notify_return', 'notify_warranty', 'created_at', 'source'
         ])
         && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
         && data.owner_id == request.auth.uid
@@ -87,8 +87,10 @@ service cloud.firestore {
         && (!('currency' in data) || data.currency in currencies())
         && (!('purchase_date' in data) || (data.purchase_date is string && data.purchase_date.size() <= 32))
         && (!('image_path' in data) || data.image_path == null || (data.image_path is string && data.image_path.size() <= 500))
+        && (!('image_url' in data) || data.image_url == null || (data.image_url is string && data.image_url.size() <= 500))
         && (!('receipt_path' in data) || data.receipt_path == null || (data.receipt_path is string && data.receipt_path.size() <= 500))
-        && (!('items' in data) || (data.items is list && data.items.size() <= 40))
+        && (!('receipt_batch_id' in data) || data.receipt_batch_id == null || (data.receipt_batch_id is string && data.receipt_batch_id.size() <= 80))
+        && (!('items' in data) || (data.items is list && data.items.size() <= 50))
         && (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 1000))
         && (!('notify_return' in data) || data.notify_return is bool)
         && (!('notify_warranty' in data) || data.notify_warranty is bool)
@@ -201,6 +203,11 @@ service cloud.firestore {
 
     match /rateLimits/{userId} {
       allow read, write: if false;
+    }
+
+    match /site/{docId} {
+      allow read: if docId == 'public';
+      allow write: if false;
     }
   }
 }

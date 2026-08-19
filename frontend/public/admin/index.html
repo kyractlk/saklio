@@ -75,6 +75,22 @@
       </div>
 
       <div class="card">
+        <h3 style="margin:0 0 12px;">Mağaza linkleri (saklio.app)</h3>
+        <p class="muted">Tanıtım sayfası ve /download yönlendirmesi bu linkleri kullanır.</p>
+        <div style="margin-top:12px;"><label>Google Play URL</label><input id="sAndroidPlay" placeholder="https://play.google.com/store/apps/details?id=..." /></div>
+        <div style="margin-top:12px;"><label>App Store URL</label><input id="sIosStore" placeholder="https://apps.apple.com/app/id..." /></div>
+        <div style="margin-top:12px;"><label>Android APK URL (isteğe bağlı)</label><input id="sAndroidApk" placeholder="https://..." /></div>
+        <div style="margin-top:12px;"><label>Web uygulaması URL</label><input id="sWebApp" value="https://saklio.app/login" /></div>
+        <div style="margin-top:12px;"><label>Slogan (TR)</label><input id="sTaglineTr" value="Fişi çek, gerisini Saklio halletsin." /></div>
+        <div style="margin-top:12px;"><label>Slogan (EN)</label><input id="sTaglineEn" value="Snap the receipt, Saklio does the rest." /></div>
+        <div class="row" style="margin-top:14px;">
+          <button class="btn btn-pri" id="ssave">Kaydet</button>
+          <a class="btn btn-sec" href="/" target="_blank" rel="noopener">Tanıtım sayfasını aç</a>
+        </div>
+        <p class="muted" id="smsg"></p>
+      </div>
+
+      <div class="card">
         <h3 style="margin:0 0 12px;">Push bildirimi</h3>
         <div><label>Başlık</label><input id="ptitle" value="Saklio" /></div>
         <div style="margin-top:12px;"><label>Mesaj</label><textarea id="pbody" placeholder="İade süren bitiyor…"></textarea></div>
@@ -145,6 +161,8 @@
     const adminBanUser = httpsCallable(fns, "adminBanUser");
     const adminDeleteUser = httpsCallable(fns, "adminDeleteUser");
     const adminSendPush = httpsCallable(fns, "adminSendPush");
+    const adminGetSiteConfig = httpsCallable(fns, "adminGetSiteConfig");
+    const adminUpdateSiteConfig = httpsCallable(fns, "adminUpdateSiteConfig");
 
     const $ = (id) => document.getElementById(id);
     let allUsers = [];
@@ -181,6 +199,17 @@
         ["Push token", stats.tokens],
         ["Alışveriş", stats.shopping],
       ].map(([k,v]) => `<div class="stat"><span class="muted">${k}</span><b>${v}</b></div>`).join("");
+      try {
+        const site = (await adminGetSiteConfig()).data || {};
+        $("sAndroidPlay").value = site.androidPlayUrl || "";
+        $("sIosStore").value = site.iosAppStoreUrl || "";
+        $("sAndroidApk").value = site.androidApkUrl || "";
+        $("sWebApp").value = site.webAppUrl || "https://saklio.app/login";
+        $("sTaglineTr").value = site.taglineTr || "Fişi çek, gerisini Saklio halletsin.";
+        $("sTaglineEn").value = site.taglineEn || "Snap the receipt, Saklio does the rest.";
+      } catch (e) {
+        $("smsg").textContent = e.message || "Mağaza ayarları yüklenemedi";
+      }
       allUsers = (await adminListUsers()).data || [];
       renderUsers(allUsers);
     }
@@ -280,6 +309,22 @@
         $("pmsg").textContent = `Gönderildi: ${res.data.sent || 0} / ${res.data.messages || 0} mesaj`;
       } catch (e) {
         $("pmsg").textContent = e.message || "Gönderilemedi";
+      }
+    };
+    $("ssave").onclick = async () => {
+      $("smsg").textContent = "Kaydediliyor…";
+      try {
+        await adminUpdateSiteConfig({
+          androidPlayUrl: $("sAndroidPlay").value.trim(),
+          iosAppStoreUrl: $("sIosStore").value.trim(),
+          androidApkUrl: $("sAndroidApk").value.trim(),
+          webAppUrl: $("sWebApp").value.trim(),
+          taglineTr: $("sTaglineTr").value.trim(),
+          taglineEn: $("sTaglineEn").value.trim(),
+        });
+        $("smsg").textContent = "Mağaza linkleri kaydedildi.";
+      } catch (e) {
+        $("smsg").textContent = e.message || "Kaydedilemedi";
       }
     };
   </script>

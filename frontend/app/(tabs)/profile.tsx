@@ -10,6 +10,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { haptic, setMoneyConfig } from "@/src/lib/format";
+import { legalUrl } from "@/src/lib/site";
 import { AystechMark } from "@/src/components/AystechMark";
 
 const THEME_NAMES: Record<string, string> = { soft: "Saklio Soft", dark: "Saklio Dark", color: "Saklio Color", sunset: "Saklio Sunset", ocean: "Saklio Ocean" };
@@ -184,11 +185,11 @@ export default function Profile() {
         </AppText>
         <View style={[styles.list, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginTop: spacing.sm }]}>
           {[
-            { href: "https://sakliov2.web.app/privacy", label: t("privacyPolicy") },
-            { href: "https://sakliov2.web.app/terms", label: t("terms") },
-            { href: "https://sakliov2.web.app/child-safety", label: t("childSafety") },
-            { href: "https://sakliov2.web.app/delete-account", label: t("deleteAccount") },
-            { href: "https://sakliov2.web.app/support", label: t("support") },
+            { href: legalUrl("/privacy"), label: t("privacyPolicy") },
+            { href: legalUrl("/terms"), label: t("terms") },
+            { href: legalUrl("/child-safety"), label: t("childSafety") },
+            { href: legalUrl("/delete-account"), label: t("deleteAccount") },
+            { href: legalUrl("/support"), label: t("support") },
           ].map((l, i, arr) => (
             <Pressable
               key={l.href}

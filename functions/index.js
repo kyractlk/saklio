@@ -66,51 +66,204 @@ function normalizeCategory(cat) {
   return allowed.includes(cat) ? cat : "diger";
 }
 
-function scanSystem(lang) {
-  const en = lang === "en";
-  return en
-    ? `You are a receipt/invoice reading assistant. Extract details from the image and return ONLY valid JSON.
-JSON format:
+const SKIP_LINE_RE =
+  /^(toplam|total|totalt|summe|gesamt|montant|importe|subtotal|sub\s*total|ara\s*toplam|zwischensumme|kdv|tax|vat|tva|iva|mwst|gst|moms|nakit|cash|kontant|esp[eè]ces|bar|kart|card|karte|credit|debit|change|para\s*üstü|wechselgeld|monnaie|indirim|rabatt|remise|descuento|discount|ödeme|payment|paiement|pago|taksit|rate|yekün|genel\s*toplam|visa|master|mastercard|amex|banka|bank|pos|fiş|fatura|receipt|invoice|facture|rechnung|bon|ticket|quittung|kvitto|nota|tarih|date|datum|saat|time|uhr|kasiyer|cashier|caissier|kassör|müşteri|customer|client|kunde|tel|phone|telefon|adres|address|adresse|website|www\.|http|thank\s*you|teşekkür|merci|danke|gracias|welcome|hoş\s*geldiniz|items\s*count|item\s*count|qty\s*total|balance|balance\s*due|amount\s*due|amount\s*paid|paid|betrag|belopp)/i;
+
+function isSkipLine(name, raw) {
+  if (raw && raw.is_product === false) return true;
+  const n = String(name || "").trim();
+  if (!n || n.length < 2) return true;
+  if (/^\d+$/.test(n)) return true;
+  if (/^[\d\s.,\-+/%]+$/.test(n)) return true;
+  return SKIP_LINE_RE.test(n);
+}
+
+function normalizeCurrency(raw) {
+  const s = String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z₺$€£]/g, "");
+  if (!s) return "TL";
+  if (["TL", "TRY", "₺"].includes(s)) return "TL";
+  if (["USD", "US", "US$", "$"].includes(s)) return "USD";
+  if (["EUR", "€"].includes(s)) return "EUR";
+  if (["SEK"].includes(s)) return "SEK";
+  if (["DKK"].includes(s)) return "DKK";
+  if (["GBP", "£"].includes(s)) return "EUR";
+  if (s.includes("TRY") || s.includes("₺")) return "TL";
+  if (s.includes("USD") || s.includes("$")) return "USD";
+  if (s.includes("EUR") || s.includes("€")) return "EUR";
+  if (s.includes("SEK")) return "SEK";
+  if (s.includes("DKK")) return "DKK";
+  return "TL";
+}
+
+function normalizePurchaseDate(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return new Date().toISOString().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m1 = s.match(/^(\d{1,2})[./\-](\d{1,2})[./\-](\d{2,4})$/);
+  if (m1) {
+    let [, a, b, y] = m1;
+    if (y.length === 2) y = Number(y) > 50 ? `19${y}` : `20${y}`;
+    const n1 = Number(a);
+    const n2 = Number(b);
+    // DD/MM vs MM/DD: if first part > 12 treat as day-first (common outside US)
+    const day = n1 > 12 ? n1 : n2 > 12 ? n2 : n1;
+    const month = n1 > 12 ? n2 : n2 > 12 ? n1 : n2;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+  }
+  try {
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  } catch {
+    /* ignore */
+  }
+  return new Date().toISOString().slice(0, 10);
+}
+
+function normalizeScanLine(it) {
+  const name = String(it?.name || it?.product_name || "").trim().slice(0, 120);
+  const qty = Math.max(1, Math.min(999, Number(it?.qty ?? it?.quantity ?? 1) || 1));
+  let unitPrice = Number(it?.unit_price ?? it?.unitPrice ?? 0);
+  let price = Number(it?.price ?? it?.total ?? 0);
+  if (!price && unitPrice) price = unitPrice * qty;
+  if (!unitPrice && price && qty > 1) unitPrice = price / qty;
+  return {
+    name,
+    price: price > 0 ? Math.round(price * 100) / 100 : null,
+    qty,
+    unit_price: unitPrice > 0 ? Math.round(unitPrice * 100) / 100 : null,
+    category: normalizeCategory(it?.category),
+    return_days: Math.min(365, Math.max(0, Number(it?.return_days) || 14)),
+    warranty_months: Math.min(120, Math.max(0, Number(it?.warranty_months ?? 24) || 0)),
+    is_product: it?.is_product !== false,
+  };
+}
+
+function normalizeScanItems(items) {
+  if (!Array.isArray(items)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const raw of items) {
+    const it = normalizeScanLine(raw);
+    if (!it.name || isSkipLine(it.name, raw)) continue;
+    const key = `${it.name.toLowerCase()}|${it.price ?? 0}|${it.qty}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const { is_product, ...row } = it;
+    out.push(row);
+    if (out.length >= 50) break;
+  }
+  return out;
+}
+
+function buildProductsFromScan(data, lang) {
+  let items = normalizeScanItems(data.products);
+  if (!items.length) items = normalizeScanItems(data.items);
+  if (!items.length && data.product_name) {
+    items = [
+      normalizeScanLine({
+        name: data.product_name,
+        price: data.total,
+        qty: 1,
+        category: data.category,
+        return_days: data.return_days,
+        warranty_months: data.warranty_months,
+      }),
+    ];
+  }
+  if (!items.length) {
+    items = [
+      normalizeScanLine({
+        name: data.merchant || loc(lang, "Fiş alışverişi", "Receipt purchase"),
+        price: data.total,
+        qty: 1,
+        category: data.category,
+        return_days: data.return_days,
+        warranty_months: data.warranty_months,
+      }),
+    ];
+  }
+  return items;
+}
+
+async function fetchProductImageUrl(name, merchant) {
+  const query = `${name} ${merchant || ""} product`.trim().slice(0, 180);
+  if (!query) return null;
+  try {
+    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const patterns = [/murl&quot;:&quot;(https?:\/\/[^&"]+?)&quot;/g, /"murl":"(https?:\/\/[^"]+?)"/g];
+    for (const re of patterns) {
+      let m;
+      while ((m = re.exec(html))) {
+        const candidate = String(m[1] || "").replace(/\\\//g, "/");
+        const cl = candidate.toLowerCase();
+        if (
+          cl.startsWith("https://") &&
+          (cl.includes(".jpg") || cl.includes(".jpeg") || cl.includes(".png") || cl.includes(".webp"))
+        ) {
+          return candidate.slice(0, 500);
+        }
+      }
+    }
+    return null;
+  } catch (e) {
+    console.warn("fetchProductImageUrl failed", name, e?.message || e);
+    return null;
+  }
+}
+
+function scanSystem() {
+  return `You are an expert multilingual receipt/invoice OCR assistant.
+Receipts may be in ANY language or script (Turkish, English, German, French, Spanish, Arabic, Chinese, Japanese, Swedish, Danish, etc.).
+Read the ENTIRE image carefully — including long supermarket, pharmacy, electronics and restaurant receipts with many line items.
+
+Return ONLY valid JSON:
 {
-  "merchant": "store name",
+  "receipt_language": "detected ISO 639-1 code, e.g. tr, en, de, fr, ar",
+  "merchant": "store name as printed (keep original script)",
   "purchase_date": "YYYY-MM-DD",
-  "currency": "TL",
+  "currency": "TL | USD | EUR | SEK | DKK",
   "total": 0.0,
   "category": "elektronik | moda | ev | otomotiv | gida | saglik | ulasim | fatura | eglence | diger",
   "return_days": 14,
   "warranty_months": 24,
-  "product_name": "short name of the main product",
-  "items": [{"name": "item name", "price": 0.0}],
-  "confidence": 0.0
+  "confidence": 0.0,
+  "items": [
+    {
+      "name": "product name EXACTLY as on receipt — do NOT translate",
+      "price": 0.0,
+      "qty": 1,
+      "unit_price": 0.0,
+      "category": "gida",
+      "return_days": 14,
+      "warranty_months": 0,
+      "is_product": true
+    }
+  ]
 }
+
 Rules:
-- If the date is unclear, use today's date.
-- Pick the best spending sector for category. Keep those exact keys.
-- gida = groceries/food, saglik = pharmacy/health, ulasim = transport/fuel, fatura = bills/utilities, eglence = entertainment.
-- return_days is usually 14 in Turkey.
-- product_name should be the short name of the main/most expensive item.
-- confidence is 0-1.`
-    : `Sen bir fiş/fatura okuma asistanısın. Sana bir fiş veya fatura görseli verilecek.
-Görselden bilgileri çıkar ve SADECE geçerli JSON döndür.
-JSON formatı:
-{
-  "merchant": "mağaza adı",
-  "purchase_date": "YYYY-MM-DD",
-  "currency": "TL",
-  "total": 0.0,
-  "category": "elektronik | moda | ev | otomotiv | gida | saglik | ulasim | fatura | eglence | diger",
-  "return_days": 14,
-  "warranty_months": 24,
-  "product_name": "ana ürünün kısa adı",
-  "items": [{"name": "ürün adı", "price": 0.0}],
-  "confidence": 0.0
-}
-Kurallar:
-- Tarih net değilse bugünün tarihini kullan.
-- category: harcama sektörü. gida=market/yemek, saglik=eczane/sağlık, ulasim=yol/yakıt, fatura=fatura/abonelik, eglence=eğlence.
-- return_days Türkiye'de genelde 14.
-- product_name en pahalı/ana ürünün kısa adı olsun.
-- confidence 0-1 arası okuma güvenin.`;
+- AUTO-DETECT the receipt language. Keep merchant and product names in the ORIGINAL language/script on the receipt.
+- Extract EVERY purchasable product line (up to 50). Never merge multiple products into one line.
+- Set is_product=false for non-product lines: subtotal, tax/VAT/GST/MwSt/TVA/KDV, payment method, change, discount summary, cashier, receipt/invoice number, address, loyalty points, tips/service charge headers.
+- Parse dates in any locale format (DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, localized month names) → output ISO YYYY-MM-DD.
+- Detect currency from symbols/text on receipt (₺/TRY→TL, $/USD, €/EUR, kr/SEK, DKK). Default TL only if truly unknown.
+- Category keys must stay in Turkish enum above (map semantically: food→gida, pharmacy→saglik, transport/fuel→ulasim, bills→fatura, entertainment→eglence, electronics→elektronik, fashion→moda, home→ev, automotive→otomotiv, other→diger).
+- return_days: use typical consumer return window for detected country (EU often 14, US varies, groceries/consumables often 0). Default 14.
+- warranty_months: 24 for electronics/appliances; 0 for food/consumables/fuel/restaurant items.
+- If date unclear use today. total = grand total on receipt. confidence 0-1.`;
 }
 
 function assistantSystem(lang) {
@@ -249,13 +402,17 @@ exports.scanReceipt = onCall(
       const text = await chatCompletions({
         model: "gpt-4o",
         json: true,
-        maxTokens: 700,
+        maxTokens: 4096,
         messages: [
-          { role: "system", content: scanSystem(lang) },
+          { role: "system", content: scanSystem() },
           {
             role: "user",
             content: [
-              { type: "text", text: loc(lang, "Bu fişi oku ve JSON döndür.", "Read this receipt and return JSON.") },
+              {
+                type: "text",
+                text:
+                  "Read this receipt in whatever language it is written. Extract every product line separately. Keep product names in the original language. Return JSON only.",
+              },
               { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } },
             ],
           },
@@ -263,20 +420,49 @@ exports.scanReceipt = onCall(
       });
       const data = extractJson(text);
       if (!data) throw new HttpsError("failed-precondition", loc(lang, "Fiş anlaşılamadı", "Could not read the receipt"));
-      data.currency = data.currency || "TL";
+      data.receipt_language = String(data.receipt_language || "unknown").slice(0, 8);
+      data.currency = normalizeCurrency(data.currency);
       data.return_days = Number(data.return_days) || 14;
       data.warranty_months = Number(data.warranty_months) || 24;
       data.category = normalizeCategory(data.category);
-      data.items = Array.isArray(data.items) ? data.items.slice(0, 40) : [];
       data.confidence = Number(data.confidence) || 0.7;
-      if (!data.purchase_date) data.purchase_date = new Date().toISOString().slice(0, 10);
-      if (!data.product_name) data.product_name = data.merchant || loc(lang, "Ürün", "Product");
+      data.purchase_date = normalizePurchaseDate(data.purchase_date);
+      data.products = buildProductsFromScan(data, lang);
+      data.item_count = data.products.length;
+      data.items = data.products;
+      const main = data.products.reduce(
+        (best, it) => ((it.price ?? 0) > (best?.price ?? 0) ? it : best),
+        data.products[0]
+      );
+      data.product_name = main?.name || data.merchant || loc(lang, "Ürün", "Product");
       return data;
     } catch (e) {
       if (e instanceof HttpsError) throw e;
       console.error("scanReceipt failed", e);
       throw new HttpsError("internal", "Scan failed");
     }
+  }
+);
+
+exports.lookupProductImages = onCall(
+  { enforceAppCheck: false, timeoutSeconds: 120, memory: "512MiB" },
+  async (request) => {
+    requireUser(request);
+    const lang = request.data?.lang === "en" ? "en" : "tr";
+    const merchant = String(request.data?.merchant || "").slice(0, 80);
+    const raw = Array.isArray(request.data?.items) ? request.data.items : [];
+    const items = raw
+      .map((it) => String(it?.name || it || "").trim().slice(0, 120))
+      .filter(Boolean)
+      .slice(0, 50);
+    if (!items.length) throw new HttpsError("invalid-argument", loc(lang, "Ürün adı gerekli", "Product name required"));
+    const results = [];
+    for (const name of items) {
+      const image_url = await fetchProductImageUrl(name, merchant);
+      results.push({ name, image_url: image_url || null });
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    return { results, found: results.filter((r) => r.image_url).length };
   }
 );
 
@@ -902,4 +1088,48 @@ exports.notifyReminders = onSchedule(
     return { sent: messages.length, mailed };
   }
 );
+
+const SITE_PUBLIC_REF = () => admin.firestore().doc("site/public");
+
+function normalizeUrl(value, maxLen = 500) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  if (!/^https?:\/\//i.test(url)) throw new HttpsError("invalid-argument", "URL must start with http:// or https://");
+  return url.slice(0, maxLen);
+}
+
+function publicSitePayload(data) {
+  const d = data || {};
+  return {
+    androidPlayUrl: String(d.androidPlayUrl || ""),
+    iosAppStoreUrl: String(d.iosAppStoreUrl || ""),
+    androidApkUrl: String(d.androidApkUrl || ""),
+    webAppUrl: String(d.webAppUrl || "https://saklio.app/login"),
+    taglineTr: String(d.taglineTr || "Fişi çek, gerisini Saklio halletsin."),
+    taglineEn: String(d.taglineEn || "Snap the receipt, Saklio does the rest."),
+    updatedAt: tsIso(d.updatedAt),
+  };
+}
+
+exports.adminGetSiteConfig = onCall({ enforceAppCheck: false }, async (request) => {
+  await requireAdmin(request);
+  const snap = await SITE_PUBLIC_REF().get();
+  return publicSitePayload(snap.data());
+});
+
+exports.adminUpdateSiteConfig = onCall({ enforceAppCheck: false }, async (request) => {
+  await requireAdmin(request);
+  const payload = {
+    androidPlayUrl: normalizeUrl(request.data?.androidPlayUrl),
+    iosAppStoreUrl: normalizeUrl(request.data?.iosAppStoreUrl),
+    androidApkUrl: normalizeUrl(request.data?.androidApkUrl),
+    webAppUrl: normalizeUrl(request.data?.webAppUrl) || "https://saklio.app/login",
+    taglineTr: String(request.data?.taglineTr || "Fişi çek, gerisini Saklio halletsin.").slice(0, 160),
+    taglineEn: String(request.data?.taglineEn || "Snap the receipt, Saklio does the rest.").slice(0, 160),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  await SITE_PUBLIC_REF().set(payload, { merge: true });
+  const snap = await SITE_PUBLIC_REF().get();
+  return publicSitePayload(snap.data());
+});
 

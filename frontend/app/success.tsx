@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
@@ -14,6 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Screen } from "@/src/components/layout";
 import { AppText, Button, Card } from "@/src/components/ui";
+import { ProductThumb } from "@/src/components/ProductCard";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { formatPrice, daysLabel, haptic } from "@/src/lib/format";
@@ -25,18 +26,22 @@ export default function Success() {
   const { colors } = useTheme();
   const { t } = useT();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const [product, setProduct] = useState<any>(null);
+  const { id, ids, count } = useLocalSearchParams<{ id?: string; ids?: string; count?: string }>();
+  const [products, setProducts] = useState<any[]>([]);
 
   const scale = useSharedValue(0);
   const checkScale = useSharedValue(0);
+  const idList = ids ? ids.split(",").filter(Boolean) : id ? [id] : [];
+  const multi = idList.length > 1 || Number(count) > 1;
 
   useEffect(() => {
     scale.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.back(1.6)) });
     checkScale.value = withDelay(300, withSequence(withTiming(1.2, { duration: 200 }), withTiming(1, { duration: 150 })));
     haptic.success();
-    if (id) api.getProduct(id).then(setProduct).catch(() => {});
-  }, [id]);
+    if (idList.length) {
+      Promise.all(idList.map((pid) => api.getProduct(pid).catch(() => null))).then((rows) => setProducts(rows.filter(Boolean)));
+    }
+  }, [id, ids]);
 
   const circleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const checkStyle = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
@@ -44,7 +49,6 @@ export default function Success() {
   return (
     <Screen>
       <View style={styles.container}>
-        {/* confetti */}
         {CONFETTI.map((_, i) => (
           <Confetti key={i} index={i} color={i % 2 ? colors.brand : colors.warning} />
         ))}
@@ -57,18 +61,53 @@ export default function Success() {
 
         <Animated.View entering={FadeIn.delay(500)}>
           <AppText variant="title" style={{ marginTop: spacing.xl, textAlign: "center" }}>
-            {t("added")}
+            {multi ? t("addedN", { n: idList.length || Number(count) || products.length }) : t("added")}
           </AppText>
+          {multi ? (
+            <AppText variant="body" color={colors.mutedText} style={{ marginTop: 6, textAlign: "center" }}>
+              {t("addedMultiB")}
+            </AppText>
+          ) : null}
         </Animated.View>
 
-        {product ? (
+        {products.length ? (
+          <Animated.View entering={FadeInDown.delay(650)} style={{ alignSelf: "stretch", marginTop: spacing.lg, maxHeight: 280 }}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={{ gap: spacing.sm }}>
+                {products.map((product) => (
+                  <Card key={product.id}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                      <ProductThumb
+                        path={product.image_path}
+                        imageUrl={product.image_url}
+                        category={product.category}
+                        size={52}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <AppText variant="body" weight="semibold" numberOfLines={2}>
+                          {product.name}
+                        </AppText>
+                        <AppText variant="caption" color={colors.mutedText}>
+                          {product.merchant} · {formatPrice(product.price, product.currency)}
+                        </AppText>
+                      </View>
+                      <Feather name="chevron-right" size={18} color={colors.mutedText} />
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            </ScrollView>
+          </Animated.View>
+        ) : null}
+
+        {!multi && products[0] ? (
           <Animated.View entering={FadeInDown.delay(650)} style={{ alignSelf: "stretch", marginTop: spacing.xl }}>
             <Card>
               <AppText variant="card" numberOfLines={2}>
-                {product.name}
+                {products[0].name}
               </AppText>
               <AppText variant="body" color={colors.mutedText} style={{ marginTop: 2 }}>
-                {product.merchant} · {formatPrice(product.price, product.currency)}
+                {products[0].merchant} · {formatPrice(products[0].price, products[0].currency)}
               </AppText>
               <View style={styles.stats}>
                 <View style={styles.stat}>
@@ -76,7 +115,7 @@ export default function Success() {
                     {t("returnShort")}
                   </AppText>
                   <AppText variant="body" weight="semibold" color={colors.success}>
-                    {daysLabel(product.return_days_left)}
+                    {daysLabel(products[0].return_days_left)}
                   </AppText>
                 </View>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -85,7 +124,7 @@ export default function Success() {
                     {t("warranty")}
                   </AppText>
                   <AppText variant="body" weight="semibold" color={colors.brandDark}>
-                    {daysLabel(product.warranty_days_left)}
+                    {daysLabel(products[0].warranty_days_left)}
                   </AppText>
                 </View>
               </View>
@@ -97,10 +136,10 @@ export default function Success() {
       <View style={styles.footer}>
         <Button
           testID="success-view-product"
-          title={t("viewProduct")}
-          onPress={() => router.replace(id ? `/product/${id}` : "/(tabs)")}
+          title={multi ? t("backHome") : t("viewProduct")}
+          onPress={() => router.replace(multi ? "/(tabs)" : idList[0] ? `/product/${idList[0]}` : "/(tabs)")}
         />
-        <Button title={t("backHome")} variant="ghost" onPress={() => router.replace("/(tabs)")} />
+        {!multi ? <Button title={t("backHome")} variant="ghost" onPress={() => router.replace("/(tabs)")} /> : null}
       </View>
     </Screen>
   );

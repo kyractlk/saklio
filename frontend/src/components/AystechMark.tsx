@@ -1,4 +1,5 @@
 import React from "react";
+import { SITE_URL } from "@/src/lib/site";
 import { Image, Linking, Pressable, View, StyleSheet } from "react-native";
 import { AppText } from "./ui";
 import { useTheme, spacing } from "@/src/theme";
@@ -7,7 +8,7 @@ export function AystechMark({ compact = false }: { compact?: boolean }) {
   const { colors } = useTheme();
   return (
     <Pressable
-      onPress={() => Linking.openURL("https://sakliov2.web.app/support")}
+      onPress={() => Linking.openURL(`${SITE_URL}/support`)}
       style={[styles.wrap, compact && { marginTop: spacing.md }]}
     >
       <Image source={require("../../assets/images/aystech.png")} style={compact ? styles.logoSm : styles.logo} resizeMode="contain" />

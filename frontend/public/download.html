@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Saklio — İndir</title>
+  <link rel="icon" href="/brand/aystech.png" />
+  <link rel="stylesheet" href="/landing.css" />
+</head>
+<body>
+  <div class="wrap" style="max-width:560px;padding-top:48px;">
+    <a class="logo" href="/">saklio</a>
+    <div class="card" style="margin-top:24px;text-align:center;">
+      <h1 style="margin:0 0 8px;font-size:24px;">Uygulamayı indir</h1>
+      <p class="muted" id="status">Mağaza linki hazırlanıyor…</p>
+      <div class="store-btns" id="fallback" style="display:none;margin-top:18px;"></div>
+      <p class="muted" style="margin-top:18px;">
+        <a href="/">Ana sayfa</a> · <a href="/login">Web uygulaması</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { detectPlatform, getSiteConfig, storeUrlForPlatform } from "/site.js";
+
+    const status = document.getElementById("status");
+    const fallback = document.getElementById("fallback");
+    const cfg = await getSiteConfig();
+    const platform = detectPlatform();
+    const url = storeUrlForPlatform(cfg, platform);
+
+    function btn(label, href) {
+      const a = document.createElement("a");
+      a.className = "btn btn-pri";
+      a.href = href;
+      a.textContent = label;
+      return a;
+    }
+
+    if (url) {
+      status.textContent = "Yönlendiriliyorsun…";
+      window.location.replace(url);
+    } else {
+      status.textContent = "Henüz mağaza linki tanımlanmadı. Aşağıdan seçebilir veya web sürümünü kullanabilirsin.";
+      fallback.style.display = "flex";
+      if (cfg.androidPlayUrl) fallback.appendChild(btn("Google Play", cfg.androidPlayUrl));
+      if (cfg.iosAppStoreUrl) fallback.appendChild(btn("App Store", cfg.iosAppStoreUrl));
+      if (cfg.androidApkUrl) fallback.appendChild(btn("Android APK", cfg.androidApkUrl));
+      fallback.appendChild(btn("Web uygulaması", cfg.webAppUrl || "/login"));
+    }
+  </script>
+</body>
+</html>

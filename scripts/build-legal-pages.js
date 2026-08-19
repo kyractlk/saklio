@@ -14,6 +14,7 @@ function page(title, inner) {
       <b>saklio</b>
       <div style="opacity:.8;margin-top:4px;">Fişi çek, gerisini Saklio halletsin.</div>
       <nav>
+        <a href="/">Ana sayfa</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/child-safety">Child safety</a>
@@ -40,10 +41,10 @@ const privacy = page(
   `<h1>Privacy Policy / Gizlilik Politikası</h1>
 <p class="muted">Last updated: 18 August 2026 · Effective for Saklio (app.saklio) operated by aystech / Kayra Çatalkaya.</p>
 <h2>English</h2>
-<p>Saklio stores your account, product, receipt, shopping-list and notification data so we can track returns and warranties for you. We use Firebase Authentication, Cloud Firestore and Cloud Storage in the European Union (eur3 / europe-west1). Receipt scans may be sent to OpenAI solely to extract purchase details. We do not sell personal data. You can export or delete your data in the app, or via <a href="/delete-account">sakliov2.web.app/delete-account</a>.</p>
+<p>Saklio stores your account, product, receipt, shopping-list and notification data so we can track returns and warranties for you. We use Firebase Authentication, Cloud Firestore and Cloud Storage in the European Union (eur3 / europe-west1). Receipt scans may be sent to OpenAI solely to extract purchase details. We do not sell personal data. You can export or delete your data in the app, or via <a href="/delete-account">saklio.app/delete-account</a>.</p>
 <p>Data we process: name, email, hashed password (Firebase Auth), product metadata, uploaded images/PDFs, shopping list items, language/theme/currency preferences, and push tokens. Legal bases: contract (providing the app) and legitimate interest (security, reminders). Retention: until you delete your account. Recipients: Google Firebase, OpenAI (scan/assistant). Contact: alikayracatalkaya@gmail.com.</p>
 <h2>Türkçe</h2>
-<p>Saklio, iade ve garanti takibi için hesabını, ürünlerini, fişlerini, alışveriş listeni ve bildirim tercihlerini saklar. Kimlik doğrulama, veritabanı ve dosya depolama Firebase üzerinde, Avrupa bölgesinde tutulur. Fiş okuma için görseller yalnızca bu amaçla OpenAI’ye gönderilebilir. Kişisel veriler satılmaz. Verilerini uygulamadan dışa aktarabilir veya <a href="/delete-account">sakliov2.web.app/delete-account</a> üzerinden hesabını silebilirsin.</p>
+<p>Saklio, iade ve garanti takibi için hesabını, ürünlerini, fişlerini, alışveriş listeni ve bildirim tercihlerini saklar. Kimlik doğrulama, veritabanı ve dosya depolama Firebase üzerinde, Avrupa bölgesinde tutulur. Fiş okuma için görseller yalnızca bu amaçla OpenAI’ye gönderilebilir. Kişisel veriler satılmaz. Verilerini uygulamadan dışa aktarabilir veya <a href="/delete-account">saklio.app/delete-account</a> üzerinden hesabını silebilirsin.</p>
 <p>İşlenen veriler: ad, e-posta, Firebase kimliği, ürün bilgileri, yüklenen görseller, alışveriş listesi, dil/tema/para birimi, push jetonları. Saklama: hesap silinene kadar. Alıcılar: Google Firebase, OpenAI. İletişim: alikayracatalkaya@gmail.com.</p>`
 );
 
@@ -70,8 +71,8 @@ const support = page(
   "Support",
   `<h1>Support / Destek</h1>
 <p>Email: <a href="mailto:alikayracatalkaya@gmail.com">alikayracatalkaya@gmail.com</a></p>
-<p>Web app: <a href="https://sakliov2.web.app">https://sakliov2.web.app</a></p>
-<p>Account deletion: <a href="/delete-account">https://sakliov2.web.app/delete-account</a></p>
+<p>Web app: <a href="https://saklio.app/login">https://saklio.app/login</a></p>
+<p>Account deletion: <a href="/delete-account">https://saklio.app/delete-account</a></p>
 <p>Produced by <b>aystech · Kayra Çatalkaya</b></p>`
 );
 

@@ -27,6 +27,9 @@
       "**/.*"
     ],
     "rewrites": [
+      { "source": "/", "destination": "/landing.html" },
+      { "source": "/download", "destination": "/download.html" },
+      { "source": "/get-app", "destination": "/download.html" },
       { "source": "/admin", "destination": "/admin/index.html" },
       { "source": "/admin/**", "destination": "/admin/index.html" },
       { "source": "/privacy", "destination": "/privacy.html" },

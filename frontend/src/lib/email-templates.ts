@@ -1,5 +1,7 @@
 export type MailLang = "tr" | "en";
 
+const SITE_URL = "https://saklio.app";
+
 const COPY = {
   slogan: { tr: "Fişi çek, gerisini Saklio halletsin.", en: "Snap the receipt, Saklio does the rest." },
   welcomeT: { tr: "Saklio’ya hoş geldin 👋", en: "Welcome to Saklio 👋" },
@@ -73,7 +75,7 @@ export function emailShell(lang: MailLang, title: string, bodyHtml: string) {
       </div>
       <div style="padding:16px 32px;color:#757D78;font-size:12px;border-top:1px solid #EAE8DF;line-height:18px;">
         ${escapeHtml(footer)}<br/>
-        <img src="https://sakliov2.web.app/brand/aystech.png" alt="aystech" width="96" style="margin-top:10px;height:auto;" />
+        <img src="${SITE_URL}/brand/aystech.png" alt="aystech" width="96" style="margin-top:10px;height:auto;" />
       </div>
     </div>
   </div>
