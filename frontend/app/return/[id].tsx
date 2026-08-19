@@ -8,9 +8,11 @@ import { AppText, Button, Card, Skeleton } from "@/src/components/ui";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function ReturnDetail() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<any>(null);
@@ -28,16 +30,16 @@ export default function ReturnDetail() {
   }, [id]);
 
   const checks = [
-    { key: "receipt", label: "Fiş mevcut" },
-    { key: "in_time", label: "Süre içinde" },
-    { key: "type_ok", label: "Ürün tipi uygun" },
+    { key: "receipt", label: t("chkReceipt") },
+    { key: "in_time", label: t("chkTime") },
+    { key: "type_ok", label: t("chkType") },
   ];
 
   const positive = data?.days_left >= 0;
 
   return (
     <Screen>
-      <Header title="Bu ürünü iade edebilir miyim?" onBack={() => router.back()} />
+      <Header title={t("canReturnT")} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         {!data ? (
           <View style={{ gap: spacing.md }}>
@@ -63,7 +65,7 @@ export default function ReturnDetail() {
             </Animated.View>
 
             <AppText variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-              İade için
+              {t("forReturn")}
             </AppText>
             <Card style={{ gap: spacing.md }}>
               {checks.map((c) => {
@@ -97,7 +99,7 @@ export default function ReturnDetail() {
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Button
             testID="start-return"
-            title={started ? "İade işlemi başlatıldı ✓" : "İade işlemini başlat"}
+            title={started ? t("returnStarted") : t("startReturn")}
             onPress={() => {
               haptic.success();
               setStarted(true);

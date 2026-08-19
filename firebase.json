@@ -24,16 +24,39 @@
     "public": "frontend/dist",
     "ignore": [
       "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
+      "**/.*"
     ],
     "rewrites": [
+      { "source": "/admin", "destination": "/admin/index.html" },
+      { "source": "/admin/**", "destination": "/admin/index.html" },
+      { "source": "/privacy", "destination": "/privacy.html" },
+      { "source": "/terms", "destination": "/terms.html" },
+      { "source": "/child-safety", "destination": "/child-safety.html" },
+      { "source": "/support", "destination": "/support.html" },
+      { "source": "/delete-account", "destination": "/delete-account.html" },
+      { "source": "**", "destination": "/index.html" }
+    ],
+    "redirects": [
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/:file",
+        "destination": "/fonts/:file",
+        "type": 302
       }
     ],
     "headers": [
+      {
+        "source": "/fonts/**",
+        "headers": [
+          { "key": "Access-Control-Allow-Origin", "value": "*" },
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        ]
+      },
+      {
+        "source": "/assets/node_modules/@expo/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        ]
+      },
       {
         "source": "**",
         "headers": [

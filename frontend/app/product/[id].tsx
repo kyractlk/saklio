@@ -9,12 +9,14 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText, Button, Card, Skeleton } from "@/src/components/ui";
 import { CountdownRing } from "@/src/components/CountdownRing";
 import { ProductThumb, useFileUrl } from "@/src/components/ProductCard";
-import { useTheme, spacing, radius, CATEGORY_COLORS, CATEGORY_LABELS } from "@/src/theme";
+import { useTheme, spacing, radius, CATEGORY_COLORS } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { formatPrice, formatDate, daysLabel, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function ProductDetail() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,7 +43,7 @@ export default function ProductDetail() {
       haptic.medium();
       const res: any = await api.shareProduct(id);
       await Share.share({
-        message: `Saklio'da bir ürün paylaştım: ${product?.name}\n${res.deeplink}`,
+        message: `${t("shareMsgFull", { name: product?.name })}\n${res.deeplink}`,
       });
     } catch {}
   };
@@ -79,7 +81,7 @@ export default function ProductDetail() {
   const returnProgress = Math.max(0, Math.min(1, rdl / (product.return_days || 14)));
   const returnColor = rdl < 0 ? colors.mutedText : rdl <= 3 ? colors.error : rdl <= 5 ? colors.warning : colors.brand;
 
-  const timeline = buildTimeline(product);
+  const timeline = buildTimeline(product, t);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -130,7 +132,7 @@ export default function ProductDetail() {
 
           {/* Status section */}
           <AppText variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-            Durum
+            {t("status")}
           </AppText>
           <View style={styles.statusRow}>
             <Card style={styles.statusCard}>
@@ -140,16 +142,16 @@ export default function ProductDetail() {
                 progress={returnProgress}
                 color={returnColor}
                 label={rdl < 0 ? "0" : `${rdl}`}
-                sublabel="gün"
+                sublabel={t("days")}
               />
               <AppText variant="caption" color={colors.mutedText} style={{ marginTop: spacing.sm }}>
-                İade süresi
+                {t("returnPeriod")}
               </AppText>
             </Card>
             <View style={{ flex: 1, gap: spacing.md }}>
               <Card style={{ paddingVertical: spacing.md }}>
                 <AppText variant="caption" color={colors.mutedText}>
-                  Garanti
+                  {t("warranty")}
                 </AppText>
                 <AppText variant="card" color={colors.brandDark} style={{ marginTop: 2 }}>
                   {daysLabel(wdl)}
@@ -163,10 +165,10 @@ export default function ProductDetail() {
                 />
                 <View>
                   <AppText variant="caption" color={colors.mutedText}>
-                    Fiş
+                    {t("receipt")}
                   </AppText>
                   <AppText variant="card">
-                    {product.receipt_path || product.image_path ? "Kayıtlı" : "Eksik"}
+                    {product.receipt_path || product.image_path ? t("saved") : t("missing")}
                   </AppText>
                 </View>
               </Card>
@@ -175,21 +177,21 @@ export default function ProductDetail() {
 
           {/* Timeline */}
           <AppText variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-            Yaşam döngüsü
+            {t("lifecycle")}
           </AppText>
           <Card>
-            {timeline.map((t, i) => (
+            {timeline.map((ev, i) => (
               <View key={i} style={styles.timelineRow}>
                 <View style={{ alignItems: "center" }}>
-                  <View style={[styles.tlDot, { backgroundColor: t.color, borderColor: colors.surfaceSecondary }]} />
+                  <View style={[styles.tlDot, { backgroundColor: ev.color, borderColor: colors.surfaceSecondary }]} />
                   {i < timeline.length - 1 && <View style={[styles.tlLine, { backgroundColor: colors.border }]} />}
                 </View>
                 <View style={{ flex: 1, paddingBottom: i < timeline.length - 1 ? spacing.lg : 0 }}>
                   <AppText variant="body" weight="semibold">
-                    {t.title}
+                    {ev.title}
                   </AppText>
                   <AppText variant="caption" color={colors.mutedText}>
-                    {t.date}
+                    {ev.date}
                   </AppText>
                 </View>
               </View>
@@ -198,16 +200,16 @@ export default function ProductDetail() {
 
           {/* Notification preferences */}
           <AppText variant="section" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-            Bildirim tercihleri
+            {t("notifyPrefs")}
           </AppText>
           <Card style={{ gap: spacing.md }}>
             <View style={styles.notifyRow}>
               <View style={{ flex: 1 }}>
                 <AppText variant="body" weight="semibold">
-                  İade hatırlatması
+                  {t("notifyReturn")}
                 </AppText>
                 <AppText variant="caption" color={colors.mutedText}>
-                  Süre bitmeden haber ver
+                  {t("notifyReturnB")}
                 </AppText>
               </View>
               <Switch
@@ -221,10 +223,10 @@ export default function ProductDetail() {
             <View style={[styles.notifyRow, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md }]}>
               <View style={{ flex: 1 }}>
                 <AppText variant="body" weight="semibold">
-                  Garanti hatırlatması
+                  {t("notifyWarranty")}
                 </AppText>
                 <AppText variant="caption" color={colors.mutedText}>
-                  Garanti bitmeden haber ver
+                  {t("notifyWarrantyB")}
                 </AppText>
               </View>
               <Switch
@@ -241,20 +243,20 @@ export default function ProductDetail() {
           <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
             <Button
               testID="action-return"
-              title="İade edebilir miyim?"
+              title={t("canReturn")}
               icon={<Feather name="rotate-ccw" size={18} color={colors.onBrand} />}
               onPress={() => router.push(`/return/${id}`)}
             />
             <Button
               testID="action-warranty"
-              title="Garanti talebi oluştur"
+              title={t("createWarranty")}
               variant="secondary"
               icon={<Feather name="shield" size={18} color={colors.onSurface} />}
               onPress={() => router.push(`/warranty-claim?id=${id}`)}
             />
             <Button
               testID="action-documents"
-              title="Belgeler"
+              title={t("documents")}
               variant="secondary"
               icon={<Feather name="folder" size={18} color={colors.onSurface} />}
               onPress={() => router.push(`/documents/${id}`)}
@@ -266,17 +268,17 @@ export default function ProductDetail() {
   );
 }
 
-function buildTimeline(p: any) {
+function buildTimeline(p: any, t: (key: string) => string) {
   const items: { title: string; date: string; color: string }[] = [];
   const base = p.purchase_date ? new Date(p.purchase_date) : new Date();
-  items.push({ title: "Satın alındı", date: formatDate(p.purchase_date), color: "#68B58A" });
+  items.push({ title: t("tlBought"), date: formatDate(p.purchase_date), color: "#68B58A" });
   if (p.receipt_path || p.image_path) {
-    items.push({ title: "Fiş kaydedildi", date: formatDate(p.purchase_date), color: "#8FCFAE" });
+    items.push({ title: t("tlReceipt"), date: formatDate(p.purchase_date), color: "#8FCFAE" });
   }
   const returnDate = new Date(base.getTime() + (p.return_days || 14) * 86400000);
-  items.push({ title: "İade süresi bitiyor", date: formatDate(returnDate.toISOString()), color: "#E9B75C" });
+  items.push({ title: t("tlReturnEnd"), date: formatDate(returnDate.toISOString()), color: "#E9B75C" });
   const warrantyEnd = new Date(base.getTime() + (p.warranty_months || 24) * 30 * 86400000);
-  items.push({ title: "Garanti bitiyor", date: formatDate(warrantyEnd.toISOString()), color: "#DF7C76" });
+  items.push({ title: t("tlWarrantyEnd"), date: formatDate(warrantyEnd.toISOString()), color: "#DF7C76" });
   return items;
 }
 

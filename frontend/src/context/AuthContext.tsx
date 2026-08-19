@@ -3,6 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { storage } from "@/src/utils/storage";
 import { api } from "@/src/api/client";
 import { auth } from "@/src/lib/firebase";
+import { hydrateLang } from "@/src/i18n";
 import type { ThemeMode } from "@/src/theme";
 
 export interface User {
@@ -11,6 +12,7 @@ export interface User {
   email: string;
   theme: ThemeMode;
   currency: string;
+  language?: "tr" | "en";
 }
 
 interface AuthContextValue {
@@ -45,8 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setThemeState(me.theme);
         await storage.setItem("saklio_theme", me.theme);
       }
+      if (me.language === "en" || me.language === "tr") {
+        await storage.setItem("saklio_lang", me.language);
+        hydrateLang(me.language);
+      }
     } catch {
-      setUser(null);
+      const u = auth.currentUser;
+      if (u) {
+        setUser({
+          id: u.uid,
+          name: u.displayName || "Saklio",
+          email: u.email || "",
+          theme: "soft",
+          currency: "TL",
+        });
+      } else {
+        setUser(null);
+      }
     }
   }, []);
 
@@ -65,11 +82,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setThemeState(res.user.theme);
       await storage.setItem("saklio_theme", res.user.theme);
     }
+    if (res.user.language === "en" || res.user.language === "tr") {
+      await storage.setItem("saklio_lang", res.user.language);
+      hydrateLang(res.user.language);
+    }
   }, []);
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
     const res: any = await api.register(name, email, password);
     setUser(res.user);
+    if (res.user.language === "en" || res.user.language === "tr") {
+      await storage.setItem("saklio_lang", res.user.language);
+      hydrateLang(res.user.language);
+    }
   }, []);
 
   const signOut = useCallback(async () => {

@@ -10,9 +10,11 @@ import { ProductThumb } from "@/src/components/ProductCard";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { formatDate, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function WarrantyClaim() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<any>(null);
@@ -41,7 +43,7 @@ export default function WarrantyClaim() {
 
   return (
     <Screen>
-      <Header title="Garanti talebi" subtitle="Üründe ne sorun var?" onBack={() => router.back()} />
+      <Header title={t("warrantyClaim")} subtitle={t("whatProblem")} onBack={() => router.back()} />
       <KeyboardAwareScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40, gap: spacing.md }}
         keyboardShouldPersistTaps="handled"
@@ -65,8 +67,8 @@ export default function WarrantyClaim() {
 
         <Input
           testID="claim-problem"
-          label="Sorunu anlat"
-          placeholder="Örn. Sol kulaklık ses vermiyor."
+          label={t("describeProblem")}
+          placeholder={t("problemPlaceholder")}
           value={problem}
           onChangeText={setProblem}
           multiline
@@ -75,7 +77,7 @@ export default function WarrantyClaim() {
 
         <Button
           testID="claim-generate"
-          title="Başvuruyu hazırla"
+          title={t("prepareClaim")}
           onPress={generate}
           loading={loading}
           icon={<Feather name="zap" size={18} color={colors.onBrand} />}
@@ -86,12 +88,12 @@ export default function WarrantyClaim() {
             <View style={[styles.ready, { backgroundColor: "rgba(104,181,138,0.12)" }]}>
               <Feather name="check-circle" size={18} color={colors.success} />
               <AppText variant="body" weight="semibold" color={colors.success}>
-                Garanti başvurun hazır.
+                {t("claimReady")}
               </AppText>
             </View>
             <Card style={{ marginTop: spacing.md }}>
               <AppText variant="caption" color={colors.mutedText}>
-                Başvuru metni
+                {t("claimText")}
               </AppText>
               <AppText variant="body" style={{ marginTop: spacing.sm, lineHeight: 22 }}>
                 {claim.claim_text}

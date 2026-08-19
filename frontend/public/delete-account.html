@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Delete account · Saklio</title>
+  <link rel="stylesheet" href="/legal.css"/>
+  <link rel="icon" href="/brand/aystech.png"/>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <b>saklio</b>
+      <div style="opacity:.8;margin-top:4px;">Account deletion / Hesap silme</div>
+      <nav>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/support">Support</a>
+      </nav>
+    </div>
+    <div class="card">
+      <h1>Delete your Saklio account</h1>
+      <p>Apple App Store and Google Play require a web way to delete an account without opening the app. Sign in below. This permanently deletes your products, documents, shopping list, messages and login.</p>
+      <p>Uygulamayı açmadan hesabını silmek için aşağıdan giriş yap. Ürünlerin, belgeler, alışveriş listesi, mesajlar ve girişin kalıcı silinir.</p>
+      <div id="form">
+        <label>Email</label>
+        <input id="email" type="email"/>
+        <label>Password</label>
+        <input id="password" type="password"/>
+        <button class="btn" id="go">Delete my account</button>
+        <p class="err" id="err"></p>
+      </div>
+      <p class="muted" id="ok"></p>
+    </div>
+    <div class="footer">
+      <img src="/brand/aystech.png" alt="aystech"/>
+      <p class="muted">Produced by aystech · Kayra Çatalkaya</p>
+    </div>
+  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+    const app = initializeApp({
+      apiKey: "AIzaSyCyXtSVXG6Fvw3h8ZignB4WI7qjATkMRW8",
+      authDomain: "sakliov2.firebaseapp.com",
+      projectId: "sakliov2",
+      appId: "1:532195717768:web:c7df88492929febb91653d",
+    });
+    const auth = getAuth(app);
+    const del = httpsCallable(getFunctions(app, "europe-west1"), "deleteMyAccount");
+    document.getElementById("go").onclick = async () => {
+      document.getElementById("err").textContent = "";
+      if (!confirm("Delete account permanently? / Hesap kalıcı silinsin mi?")) return;
+      try {
+        await signInWithEmailAndPassword(auth, document.getElementById("email").value.trim(), document.getElementById("password").value);
+        await del({});
+        document.getElementById("ok").textContent = "Account deleted. / Hesap silindi.";
+        document.getElementById("form").style.display = "none";
+      } catch (e) {
+        document.getElementById("err").textContent = e.message || "Failed";
+      }
+    };
+  </script>
+</body>
+</html>

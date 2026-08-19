@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Saklio Admin</title>
+  <link rel="icon" href="/brand/aystech.png" />
+  <style>
+    :root { --bg:#F8F7F2; --ink:#202522; --muted:#757D78; --brand:#8FCFAE; --dark:#5B9F7D; --line:#EAE8DF; --card:#fff; --err:#DF7C76; --ok:#5B9F7D; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+    .wrap { max-width:1180px; margin:0 auto; padding:28px 20px 80px; }
+    .hero { background:linear-gradient(135deg,#8FCFAE,#5B9F7D); border-radius:24px; padding:28px; color:#0E241A; display:flex; justify-content:space-between; gap:16px; align-items:center; }
+    .logo { letter-spacing:2.4px; font-weight:800; font-size:22px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:20px; margin-top:16px; }
+    input, textarea { width:100%; border:1px solid var(--line); border-radius:14px; padding:12px 14px; font-size:15px; background:#fff; }
+    textarea { min-height:90px; resize:vertical; }
+    label { display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    .btn { border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; font-size:13px; }
+    .btn-pri { background:var(--dark); color:#fff; }
+    .btn-sec { background:#EAF6EF; color:#0E241A; }
+    .btn-danger { background:#F8E4E2; color:#8A2F2A; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+    .stat { background:#F8F7F2; border-radius:16px; padding:16px; }
+    .stat b { font-size:24px; display:block; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th { text-align:left; color:var(--muted); font-weight:600; padding:8px 6px; }
+    td { padding:10px 6px; border-top:1px solid var(--line); vertical-align:middle; }
+    .muted { color:var(--muted); font-size:13px; }
+    .err { color:var(--err); }
+    .ok { color:var(--ok); }
+    img.brand { height:42px; }
+    a { color:var(--dark); }
+    .badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+    .badge-on { background:#DDF3E6; color:#2C5C43; }
+    .badge-off { background:#F3E3E2; color:#8A2F2A; }
+    .badge-live { background:#BBD4EE; color:#25415F; }
+    .drawer { position:fixed; inset:0; background:rgba(14,36,26,.35); display:none; align-items:flex-start; justify-content:flex-end; z-index:20; }
+    .drawer.open { display:flex; }
+    .panel { width:min(460px,100%); height:100%; background:#fff; padding:22px; overflow:auto; box-shadow:-12px 0 40px rgba(14,36,26,.12); }
+    .kv { display:grid; grid-template-columns:120px 1fr; gap:8px 12px; font-size:14px; margin:12px 0; }
+    .kv b { color:var(--muted); font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <div class="logo">saklio admin</div>
+        <div class="muted" style="color:#0E241A;opacity:.8;margin-top:6px;">Kullanıcı, cihaz, izin, e-posta ve push yönetimi</div>
+      </div>
+      <img class="brand" src="/brand/aystech.png" alt="aystech" />
+    </div>
+
+    <div id="login" class="card">
+      <h2 style="margin:0 0 8px;">Yönetici girişi</h2>
+      <p class="muted">Yalnızca yetkili hesap.</p>
+      <div style="margin-top:14px;"><label>E-posta</label><input id="email" type="email" autocomplete="username" /></div>
+      <div style="margin-top:12px;"><label>Şifre</label><input id="password" type="password" autocomplete="current-password" /></div>
+      <div class="row" style="margin-top:16px;"><button class="btn btn-pri" id="signin">Giriş yap</button></div>
+      <p class="err" id="loginErr"></p>
+    </div>
+
+    <div id="app" style="display:none;">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <div>
+            <b id="who"></b>
+            <div class="muted">Produced by aystech · Kayra Çatalkaya</div>
+          </div>
+          <button class="btn btn-sec" id="signout">Çıkış</button>
+        </div>
+        <div class="stats" id="stats" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 12px;">Push bildirimi</h3>
+        <div><label>Başlık</label><input id="ptitle" value="Saklio" /></div>
+        <div style="margin-top:12px;"><label>Mesaj</label><textarea id="pbody" placeholder="İade süren bitiyor…"></textarea></div>
+        <div style="margin-top:12px;"><label>Hedef kullanıcı ID (boş = herkes)</label><input id="puid" placeholder="uid" /></div>
+        <div class="row" style="margin-top:14px;">
+          <button class="btn btn-pri" id="psend">Bildirim gönder</button>
+        </div>
+        <p class="muted" id="pmsg"></p>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;">Kullanıcılar</h3>
+          <input id="q" placeholder="Ara: ad / e-posta" style="max-width:280px;" />
+        </div>
+        <div style="overflow:auto;margin-top:12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Ad</th><th>E-posta</th><th>Durum</th><th>Süre</th><th>Son görülme</th><th>Cihaz</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="users"></tbody>
+          </table>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:18px;">
+        <a href="/privacy">Gizlilik</a> · <a href="/terms">Şartlar</a> · <a href="/child-safety">Çocuk güvenliği</a> · <a href="/delete-account">Hesap silme</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="drawer" id="drawer">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;">
+        <h3 style="margin:0;" id="dtitle">Kullanıcı</h3>
+        <button class="btn btn-sec" id="dclose">Kapat</button>
+      </div>
+      <div id="ddetail" class="muted" style="margin-top:14px;">Yükleniyor…</div>
+      <div class="row" style="margin-top:18px;">
+        <button class="btn btn-sec" id="dban">Askıya al</button>
+        <button class="btn btn-pri" id="dunban">Yasağı kaldır</button>
+        <button class="btn btn-danger" id="ddel">Hesabı sil</button>
+      </div>
+      <p class="muted" id="dmsg"></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+
+    const app = initializeApp({
+      apiKey: "AIzaSyCyXtSVXG6Fvw3h8ZignB4WI7qjATkMRW8",
+      authDomain: "sakliov2.firebaseapp.com",
+      projectId: "sakliov2",
+      storageBucket: "sakliov2.firebasestorage.app",
+      messagingSenderId: "532195717768",
+      appId: "1:532195717768:web:c7df88492929febb91653d",
+    });
+    const auth = getAuth(app);
+    await setPersistence(auth, browserLocalPersistence);
+    const fns = getFunctions(app, "europe-west1");
+    const adminStats = httpsCallable(fns, "adminStats");
+    const adminListUsers = httpsCallable(fns, "adminListUsers");
+    const adminGetUser = httpsCallable(fns, "adminGetUser");
+    const adminBanUser = httpsCallable(fns, "adminBanUser");
+    const adminDeleteUser = httpsCallable(fns, "adminDeleteUser");
+    const adminSendPush = httpsCallable(fns, "adminSendPush");
+
+    const $ = (id) => document.getElementById(id);
+    let allUsers = [];
+    let currentUid = "";
+
+    const fmt = (iso) => {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleString("tr-TR"); } catch { return iso; }
+    };
+    const esc = (s) => String(s || "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
+
+    function renderUsers(list) {
+      $("users").innerHTML = list.map((u) => `<tr>
+        <td>${esc(u.name || "—")}</td>
+        <td>${esc(u.email || "—")}</td>
+        <td>${u.banned ? '<span class="badge badge-off">ban</span>' : u.online ? '<span class="badge badge-live">çevrimiçi</span>' : '<span class="badge badge-on">aktif</span>'}</td>
+        <td>${u.daysOnSystem ?? 0} gün</td>
+        <td class="muted">${fmt(u.lastSeen)}</td>
+        <td>${u.devices || 0}</td>
+        <td class="row">
+          <button class="btn btn-sec" data-open="${u.id}">Detay</button>
+          <button class="btn btn-sec" data-push="${u.id}">Push</button>
+        </td>
+      </tr>`).join("");
+      $("users").querySelectorAll("[data-open]").forEach((b) => b.onclick = () => openUser(b.dataset.open));
+      $("users").querySelectorAll("[data-push]").forEach((b) => b.onclick = () => { $("puid").value = b.dataset.push; $("pbody").focus(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+    }
+
+    async function boot() {
+      const stats = (await adminStats()).data;
+      $("stats").innerHTML = [
+        ["Kullanıcı", stats.users],
+        ["Ürün", stats.products],
+        ["Push token", stats.tokens],
+        ["Alışveriş", stats.shopping],
+      ].map(([k,v]) => `<div class="stat"><span class="muted">${k}</span><b>${v}</b></div>`).join("");
+      allUsers = (await adminListUsers()).data || [];
+      renderUsers(allUsers);
+    }
+
+    async function openUser(uid) {
+      currentUid = uid;
+      $("drawer").classList.add("open");
+      $("dmsg").textContent = "";
+      $("ddetail").textContent = "Yükleniyor…";
+      try {
+        const u = (await adminGetUser({ uid })).data;
+        $("dtitle").textContent = u.name || u.email || uid;
+        const perm = u.permissions || {};
+        const devices = (u.devices || []).map((d) => `<li>${esc(d.platform || "—")} · ${esc(d.device || "cihaz")} · ${fmt(d.lastSeen || d.createdAt)} · …${esc(d.tokenTail || "")}</li>`).join("") || "<li>Kayıtlı cihaz yok</li>";
+        $("ddetail").innerHTML = `
+          <div class="kv">
+            <b>E-posta</b><span>${esc(u.email)}</span>
+            <b>UID</b><span class="muted">${esc(u.id)}</span>
+            <b>Kayıt</b><span>${fmt(u.createdAt)}</span>
+            <b>Sistemde</b><span>${u.daysOnSystem} gün</span>
+            <b>Son görülme</b><span>${fmt(u.lastSeen)} ${u.online ? "(çevrimiçi)" : ""}</span>
+            <b>Platform</b><span>${esc(u.lastPlatform || "—")} · ${esc(u.lastDevice || "")}</span>
+            <b>Auth</b><span>${u.auth?.disabled ? "devre dışı" : "açık"} · ${u.auth?.banned ? "ban" : "ban yok"} · son giriş ${fmt(u.auth?.lastSignIn)}</span>
+            <b>İzinler</b><span>kamera: ${esc(perm.camera || "—")} · galeri: ${esc(perm.photos || "—")} · bildirim: ${esc(perm.notifications || "—")}</span>
+            <b>Ürün / liste</b><span>${u.products || 0} ürün · ${u.shopping || 0} alışveriş</span>
+          </div>
+          <div class="muted">Cihazlar</div>
+          <ul>${devices}</ul>`;
+      } catch (e) {
+        $("ddetail").textContent = e.message || "Yüklenemedi";
+      }
+    }
+
+    $("dclose").onclick = () => $("drawer").classList.remove("open");
+    $("drawer").onclick = (e) => { if (e.target.id === "drawer") $("drawer").classList.remove("open"); };
+    $("q").oninput = () => {
+      const q = $("q").value.trim().toLowerCase();
+      renderUsers(allUsers.filter((u) => `${u.name} ${u.email} ${u.id}`.toLowerCase().includes(q)));
+    };
+
+    $("dban").onclick = async () => {
+      if (!currentUid || !confirm("Bu kullanıcı askıya alınsın mı?")) return;
+      $("dmsg").textContent = "İşleniyor…";
+      try {
+        await adminBanUser({ uid: currentUid, banned: true, reason: "admin" });
+        $("dmsg").textContent = "Askıya alındı. Oturumları kapatıldı.";
+        await boot();
+        openUser(currentUid);
+      } catch (e) { $("dmsg").textContent = e.message || "Hata"; }
+    };
+    $("dunban").onclick = async () => {
+      if (!currentUid) return;
+      $("dmsg").textContent = "İşleniyor…";
+      try {
+        await adminBanUser({ uid: currentUid, banned: false });
+        $("dmsg").textContent = "Yasak kaldırıldı.";
+        await boot();
+        openUser(currentUid);
+      } catch (e) { $("dmsg").textContent = e.message || "Hata"; }
+    };
+    $("ddel").onclick = async () => {
+      if (!currentUid || !confirm("Hesap ve tüm veriler kalıcı silinsin mi?")) return;
+      $("dmsg").textContent = "Siliniyor…";
+      try {
+        await adminDeleteUser({ uid: currentUid });
+        $("dmsg").textContent = "Silindi.";
+        $("drawer").classList.remove("open");
+        await boot();
+      } catch (e) { $("dmsg").textContent = e.message || "Hata"; }
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        $("login").style.display = "block";
+        $("app").style.display = "none";
+        return;
+      }
+      $("who").textContent = user.email;
+      $("login").style.display = "none";
+      $("app").style.display = "block";
+      try { await boot(); } catch (e) { $("pmsg").textContent = e.message || "Admin yetkisi yok"; }
+    });
+
+    $("signin").onclick = async () => {
+      $("loginErr").textContent = "";
+      try {
+        await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+      } catch (e) {
+        $("loginErr").textContent = e.message || "Giriş başarısız";
+      }
+    };
+    $("signout").onclick = () => signOut(auth);
+    $("psend").onclick = async () => {
+      $("pmsg").textContent = "Gönderiliyor…";
+      try {
+        const res = await adminSendPush({ title: $("ptitle").value, body: $("pbody").value, uid: $("puid").value });
+        $("pmsg").textContent = `Gönderildi: ${res.data.sent || 0} / ${res.data.messages || 0} mesaj`;
+      } catch (e) {
+        $("pmsg").textContent = e.message || "Gönderilemedi";
+      }
+    };
+  </script>
+</body>
+</html>

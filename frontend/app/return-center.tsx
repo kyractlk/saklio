@@ -10,9 +10,11 @@ import { ShieldIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { formatPrice } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function ReturnCenter() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function ReturnCenter() {
 
   return (
     <Screen>
-      <Header title="İade Merkezi" onBack={() => router.back()} />
+      <Header title={t("returnCenter")} onBack={() => router.back()} />
       {loading ? (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
           <Skeleton height={100} radius={24} />
@@ -47,13 +49,13 @@ export default function ReturnCenter() {
             products.length > 0 ? (
               <LinearGradient colors={[colors.brand, colors.brandDark]} style={styles.summary}>
                 <AppText variant="body" color={colors.onBrand} style={{ opacity: 0.9 }}>
-                  Toplam iade edilebilir değer
+                  {t("totalReturnableValue")}
                 </AppText>
                 <AppText variant="title" color={colors.onBrand} style={{ fontVariant: ["tabular-nums"], marginTop: 4 }}>
                   {formatPrice(total, "TL")}
                 </AppText>
                 <AppText variant="body" color={colors.onBrand} style={{ opacity: 0.9 }}>
-                  {products.length} ürün hâlâ iade edilebilir
+                  {t("returnableCount", { n: products.length })}
                 </AppText>
               </LinearGradient>
             ) : null
@@ -62,8 +64,8 @@ export default function ReturnCenter() {
             <View style={{ paddingTop: 60 }}>
               <EmptyState
                 illustration={<ShieldIllustration size={160} brand={colors.brand} ink={colors.onSurface} />}
-                title="İade edilebilir ürün yok"
-                body="Şu an iade süresi devam eden bir ürünün bulunmuyor."
+                title={t("noReturnable")}
+                body={t("noReturnableB")}
               />
             </View>
           }

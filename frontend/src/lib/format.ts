@@ -9,8 +9,16 @@ let _prefCurrency = "TL";
 let _rates: Record<string, number> | null = null; // per USD
 let _lang: "tr" | "en" = "tr";
 
+export function getLang(): "tr" | "en" {
+  return _lang;
+}
+
 export function setLangConfig(lang: "tr" | "en") {
   _lang = lang;
+}
+
+export function L(tr: string, en: string) {
+  return _lang === "en" ? en : tr;
 }
 
 export function setMoneyConfig(pref: string, rates: Record<string, number> | null) {

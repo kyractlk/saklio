@@ -15,13 +15,14 @@ import { CalendarIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api, uploadImage } from "@/src/api/client";
 import { formatDate, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 const DOC_TYPES = [
-  { key: "fis", label: "Fiş", icon: "file-text", color: "#68B58A" },
-  { key: "fatura", label: "Fatura", icon: "file", color: "#5B9F7D" },
-  { key: "garanti", label: "Garanti", icon: "shield", color: "#6C93D6" },
-  { key: "kilavuz", label: "Kullanım Kılavuzu", icon: "book-open", color: "#E9B75C" },
-  { key: "servis", label: "Servis Belgesi", icon: "tool", color: "#DF7C76" },
+  { key: "fis", icon: "file-text", color: "#68B58A" },
+  { key: "fatura", icon: "file", color: "#5B9F7D" },
+  { key: "garanti", icon: "shield", color: "#6C93D6" },
+  { key: "kilavuz", icon: "book-open", color: "#E9B75C" },
+  { key: "servis", icon: "tool", color: "#DF7C76" },
 ];
 
 function typeMeta(key: string) {
@@ -30,6 +31,7 @@ function typeMeta(key: string) {
 
 export default function Documents() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,7 +83,7 @@ export default function Documents() {
     haptic.medium();
     try {
       const path = await uploadImage(uri);
-      await api.addDocument(id, { type: selectedType, name: typeMeta(selectedType).label, file_path: path });
+      await api.addDocument(id, { type: selectedType, name: t(`doc_${selectedType}`), file_path: path });
       haptic.success();
       setSheetOpen(false);
       load();
@@ -94,7 +96,7 @@ export default function Documents() {
 
   return (
     <Screen>
-      <Header title="Belgeler" subtitle="Fiş, fatura, garanti ve kılavuzlar" onBack={() => router.back()} />
+      <Header title={t("documents")} subtitle={t("docsSub")} onBack={() => router.back()} />
       {loading ? (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
           {[1, 2, 3].map((i) => (
@@ -111,9 +113,9 @@ export default function Documents() {
             <View style={{ paddingTop: 40 }}>
               <EmptyState
                 illustration={<CalendarIllustration size={160} brand={colors.brand} ink={colors.onSurface} />}
-                title="Henüz belge yok"
-                body="Bu ürüne fiş, garanti veya kullanım kılavuzu ekleyerek her şeyi tek yerde tut."
-                cta="Belge ekle"
+                title={t("noDocsT")}
+                body={t("noDocsB")}
+                cta={t("addDoc")}
                 onCta={() => {
                   haptic.light();
                   setSheetOpen(true);
@@ -152,29 +154,29 @@ export default function Documents() {
         >
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           <AppText variant="section" style={{ marginBottom: spacing.md }}>
-            Belge türü seç
+            {t("pickDocType")}
           </AppText>
           <View style={{ gap: spacing.sm }}>
-            {DOC_TYPES.map((t) => {
-              const active = selectedType === t.key;
+            {DOC_TYPES.map((dt) => {
+              const active = selectedType === dt.key;
               return (
                 <Pressable
-                  key={t.key}
-                  testID={`doctype-${t.key}`}
+                  key={dt.key}
+                  testID={`doctype-${dt.key}`}
                   onPress={() => {
                     haptic.light();
-                    setSelectedType(t.key);
+                    setSelectedType(dt.key);
                   }}
                   style={[
                     styles.typeRow,
                     { backgroundColor: colors.surfaceSecondary, borderColor: active ? colors.brand : colors.border, borderWidth: active ? 2 : 1 },
                   ]}
                 >
-                  <View style={[styles.typeIcon, { backgroundColor: t.color + "22" }]}>
-                    <Feather name={t.icon as any} size={18} color={t.color} />
+                  <View style={[styles.typeIcon, { backgroundColor: dt.color + "22" }]}>
+                    <Feather name={dt.icon as any} size={18} color={dt.color} />
                   </View>
                   <AppText variant="body" style={{ flex: 1 }}>
-                    {t.label}
+                    {t(`doc_${dt.key}`)}
                   </AppText>
                   {active ? <Feather name="check-circle" size={20} color={colors.brand} /> : null}
                 </Pressable>
@@ -186,7 +188,7 @@ export default function Documents() {
             <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
               <ActivityIndicator color={colors.brand} />
               <AppText variant="caption" color={colors.mutedText} style={{ marginTop: spacing.sm }}>
-                Yükleniyor…
+                {t("loading")}
               </AppText>
             </View>
           ) : (
@@ -194,7 +196,7 @@ export default function Documents() {
               <View style={{ flexDirection: "row", gap: spacing.md }}>
                 <Button
                   testID="doc-camera"
-                  title="Kamera"
+                  title={t("camera")}
                   variant="secondary"
                   icon={<Feather name="camera" size={18} color={colors.onSurface} />}
                   onPress={() => uploadFrom("camera")}
@@ -202,7 +204,7 @@ export default function Documents() {
                 />
                 <Button
                   testID="doc-gallery"
-                  title="Galeri"
+                  title={t("gallery")}
                   variant="secondary"
                   icon={<Feather name="image" size={18} color={colors.onSurface} />}
                   onPress={() => uploadFrom("gallery")}
@@ -211,7 +213,7 @@ export default function Documents() {
               </View>
               <Button
                 testID="doc-files"
-                title="Dosyalardan seç"
+                title={t("fromFiles")}
                 icon={<Feather name="folder" size={18} color={colors.onBrand} />}
                 onPress={uploadFromFiles}
               />
@@ -230,6 +232,7 @@ export default function Documents() {
 
 function DocCard({ doc, index, onPress, onDelete }: any) {
   const { colors } = useTheme();
+  const { t } = useT();
   const meta = typeMeta(doc.type);
   const url = useFileUrl(doc.file_path);
   return (
@@ -250,7 +253,7 @@ function DocCard({ doc, index, onPress, onDelete }: any) {
           </View>
         )}
         <View style={{ flex: 1 }}>
-          <AppText variant="card">{meta.label}</AppText>
+          <AppText variant="card">{t(`doc_${doc.type}`)}</AppText>
           <AppText variant="caption" color={colors.mutedText}>
             {formatDate(doc.created_at)}
           </AppText>

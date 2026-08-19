@@ -121,6 +121,11 @@ export const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
   moda: { bg: "#D1C4E9", fg: "#432D63" },
   ev: { bg: "#FFCC80", fg: "#6B4406" },
   otomotiv: { bg: "#B0BEC5", fg: "#2E3A40" },
+  gida: { bg: "#C8E6C9", fg: "#1B5E20" },
+  saglik: { bg: "#F8BBD0", fg: "#880E4F" },
+  ulasim: { bg: "#B2EBF2", fg: "#006064" },
+  fatura: { bg: "#FFE0B2", fg: "#E65100" },
+  eglence: { bg: "#E1BEE7", fg: "#4A148C" },
   diger: { bg: "#DDF3E6", fg: "#2C5C43" },
 };
 
@@ -130,6 +135,11 @@ export const CATEGORY_LABELS: Record<string, string> = {
   moda: "Moda",
   ev: "Ev",
   otomotiv: "Otomotiv",
+  gida: "Gıda",
+  saglik: "Sağlık",
+  ulasim: "Ulaşım",
+  fatura: "Fatura",
+  eglence: "Eğlence",
   diger: "Diğer",
 };
 

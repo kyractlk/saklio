@@ -17,19 +17,15 @@ import { ScanReceiptIllustration, ReceiptErrorIllustration } from "@/src/compone
 import { useTheme, spacing, radius } from "@/src/theme";
 import { scanStore } from "@/src/lib/scanStore";
 import { api, uploadImage } from "@/src/api/client";
+import { compressImageBase64, uriToBase64 } from "@/src/lib/image-b64";
 import { haptic } from "@/src/lib/format";
-
-const STEPS = [
-  "Fiş okunuyor",
-  "Mağaza bulundu",
-  "Ürünler tanınıyor",
-  "İade koşulları kontrol ediliyor",
-  "Garanti bilgileri hazırlanıyor",
-];
+import { useT } from "@/src/i18n";
 
 export default function Processing() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
+  const STEPS = [t("step1"), t("step2"), t("step3"), t("step4"), t("step5")];
   const [step, setStep] = useState(0);
   const [error, setError] = useState(false);
   const doneRef = useRef(false);
@@ -46,8 +42,11 @@ export default function Processing() {
     // Kick off the real AI scan
     (async () => {
       try {
-        if (!draft.base64) throw new Error("no image");
-        const res = await api.scan(draft.base64);
+        let b64 = draft.base64;
+        if (!b64 && draft.uri) b64 = await uriToBase64(draft.uri);
+        if (!b64) throw new Error("no image");
+        b64 = await compressImageBase64(b64);
+        const res = await api.scan(b64);
         resultRef.current = res;
         // upload image in background (best effort)
         if (draft.uri) {
@@ -101,16 +100,16 @@ export default function Processing() {
         <Animated.View entering={FadeIn} style={styles.errorWrap}>
           <ReceiptErrorIllustration size={180} brand={colors.error} ink={colors.onSurface} />
           <AppText variant="title" style={{ marginTop: spacing.lg, textAlign: "center" }}>
-            Bu fişi okumakta biraz zorlandık.
+            {t("scanErrT")}
           </AppText>
           <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
-            Daha net bir fotoğraf çekebilir veya bilgileri elle girebilirsin.
+            {t("scanErrB")}
           </AppText>
           <View style={{ width: "100%", gap: spacing.md, marginTop: spacing.xl }}>
-            <Button testID="retry-scan" title="Tekrar çek" onPress={() => router.replace("/scan")} />
+            <Button testID="retry-scan" title={t("retryScan")} onPress={() => router.replace("/scan")} />
             <Button
               testID="manual-entry"
-              title="Bilgileri elle gir"
+              title={t("manualEntry")}
               variant="secondary"
               onPress={() => router.replace("/add-manually")}
             />
@@ -128,10 +127,10 @@ export default function Processing() {
         </Animated.View>
 
         <AppText variant="title" style={{ marginTop: spacing.xl }}>
-          Saklio çalışıyor
+          {t("working")}
         </AppText>
         <AppText variant="body" color={colors.mutedText} style={{ marginTop: 4 }}>
-          Fişin yapay zekâ ile işleniyor…
+          {t("processingReceipt")}
         </AppText>
 
         <View style={styles.steps}>
@@ -139,29 +138,27 @@ export default function Processing() {
             const active = i <= step;
             const done = i < step;
             return (
-              <Animated.View
-                key={label}
-                entering={FadeInDown.delay(i * 100)}
-                style={[styles.stepRow, { opacity: active ? 1 : 0.35 }]}
-              >
-                <View
-                  style={[
-                    styles.stepIcon,
-                    {
-                      backgroundColor: done ? colors.brand : active ? colors.surfaceTertiary : colors.surfaceSecondary,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  {done ? (
-                    <Feather name="check" size={14} color={colors.onBrand} />
-                  ) : active ? (
-                    <View style={[styles.dot, { backgroundColor: colors.brandDark }]} />
-                  ) : null}
+              <Animated.View key={label} entering={FadeInDown.delay(i * 100)}>
+                <View style={[styles.stepRow, { opacity: active ? 1 : 0.35 }]}>
+                  <View
+                    style={[
+                      styles.stepIcon,
+                      {
+                        backgroundColor: done ? colors.brand : active ? colors.surfaceTertiary : colors.surfaceSecondary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    {done ? (
+                      <Feather name="check" size={14} color={colors.onBrand} />
+                    ) : active ? (
+                      <View style={[styles.dot, { backgroundColor: colors.brandDark }]} />
+                    ) : null}
+                  </View>
+                  <AppText variant="body" weight={active ? "medium" : "regular"}>
+                    {label}
+                  </AppText>
                 </View>
-                <AppText variant="body" weight={active ? "medium" : "regular"}>
-                  {label}
-                </AppText>
               </Animated.View>
             );
           })}

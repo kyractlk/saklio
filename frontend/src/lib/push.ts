@@ -4,15 +4,23 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { api } from "@/src/api/client";
 
-// Foreground display behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
+
+export function listenToNotificationOpens(onUrl: (url: string) => void) {
+  return Notifications.addNotificationResponseReceivedListener((resp) => {
+    const url = (resp.notification.request.content.data as any)?.action_url;
+    if (url && typeof url === "string") onUrl(url);
+  });
+}
 
 export async function registerForPush(userId: string): Promise<string | null> {
   try {
@@ -45,7 +53,12 @@ export async function registerForPush(userId: string): Promise<string | null> {
     );
     const token = tokenResp.data;
 
-    await api.registerPush({ user_id: userId, platform: Platform.OS, device_token: token });
+    await api.registerPush({
+      user_id: userId,
+      platform: Platform.OS,
+      device_token: token,
+      device_name: Device.modelName || Device.deviceName || Platform.OS,
+    });
     return token;
   } catch (e) {
     // non-blocking

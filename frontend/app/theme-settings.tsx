@@ -8,50 +8,52 @@ import { AppText } from "@/src/components/ui";
 import { useTheme, spacing, radius, ThemeMode } from "@/src/theme";
 import { useAuth } from "@/src/context/AuthContext";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 const THEMES: { key: ThemeMode; name: string; desc: string; swatches: string[]; bg: string; ink: string }[] = [
-  { key: "soft", name: "Saklio Soft", desc: "Sıcak krem & mint — sakin ve premium", swatches: ["#F8F7F2", "#8FCFAE", "#5B9F7D"], bg: "#F8F7F2", ink: "#202522" },
-  { key: "dark", name: "Saklio Dark", desc: "Tam karanlık mod — göz dostu", swatches: ["#111512", "#8FD3AF", "#202722"], bg: "#111512", ink: "#F6F7F6" },
-  { key: "color", name: "Saklio Color", desc: "Pastel tonlar — genç ve canlı", swatches: ["#FBF9FF", "#A9C7F5", "#D1C4E9"], bg: "#FBF9FF", ink: "#26233A" },
-  { key: "sunset", name: "Saklio Sunset", desc: "Sıcak şeftali — enerjik ve davetkâr", swatches: ["#FFF6F0", "#F0A87E", "#D97D4E"], bg: "#FFF6F0", ink: "#3A2A22" },
-  { key: "ocean", name: "Saklio Ocean", desc: "Ferah mavi — sakin ve berrak", swatches: ["#F1F7FB", "#6FB7D6", "#3E86A8"], bg: "#F1F7FB", ink: "#16303F" },
+  { key: "soft", name: "Saklio Soft", desc: "themeSoft", swatches: ["#F8F7F2", "#8FCFAE", "#5B9F7D"], bg: "#F8F7F2", ink: "#202522" },
+  { key: "dark", name: "Saklio Dark", desc: "themeDark", swatches: ["#111512", "#8FD3AF", "#202722"], bg: "#111512", ink: "#F6F7F6" },
+  { key: "color", name: "Saklio Color", desc: "themeColor", swatches: ["#FBF9FF", "#A9C7F5", "#D1C4E9"], bg: "#FBF9FF", ink: "#26233A" },
+  { key: "sunset", name: "Saklio Sunset", desc: "themeSunset", swatches: ["#FFF6F0", "#F0A87E", "#D97D4E"], bg: "#FFF6F0", ink: "#3A2A22" },
+  { key: "ocean", name: "Saklio Ocean", desc: "themeOcean", swatches: ["#F1F7FB", "#6FB7D6", "#3E86A8"], bg: "#F1F7FB", ink: "#16303F" },
 ];
 
 export default function ThemeSettings() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const { theme, setTheme } = useAuth();
 
   return (
     <Screen>
-      <Header title="Tema" subtitle="Saklio’yu kendine göre ayarla" onBack={() => router.back()} />
+      <Header title={t("theme")} subtitle={t("themeSub")} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        {THEMES.map((t, i) => {
-          const active = theme === t.key;
+        {THEMES.map((item, i) => {
+          const active = theme === item.key;
           return (
-            <Animated.View key={t.key} entering={FadeInDown.delay(i * 80)}>
+            <Animated.View key={item.key} entering={FadeInDown.delay(i * 80)}>
               <Pressable
-                testID={`theme-${t.key}`}
+                testID={`theme-${item.key}`}
                 onPress={() => {
                   haptic.success();
-                  setTheme(t.key);
+                  setTheme(item.key);
                 }}
                 style={[
                   styles.card,
-                  { backgroundColor: t.bg, borderColor: active ? colors.brand : colors.border, borderWidth: active ? 2.5 : 1 },
+                  { backgroundColor: item.bg, borderColor: active ? colors.brand : colors.border, borderWidth: active ? 2.5 : 1 },
                 ]}
               >
                 <View style={styles.preview}>
-                  {t.swatches.map((s, j) => (
-                    <View key={j} style={[styles.swatch, { backgroundColor: s, borderColor: t.ink + "22" }]} />
+                  {item.swatches.map((s, j) => (
+                    <View key={j} style={[styles.swatch, { backgroundColor: s, borderColor: item.ink + "22" }]} />
                   ))}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <AppText variant="card" color={t.ink}>
-                    {t.name}
+                  <AppText variant="card" color={item.ink}>
+                    {item.name}
                   </AppText>
-                  <AppText variant="caption" style={{ color: t.ink, opacity: 0.6, marginTop: 2 }}>
-                    {t.desc}
+                  <AppText variant="caption" style={{ color: item.ink, opacity: 0.6, marginTop: 2 }}>
+                    {t(item.desc)}
                   </AppText>
                 </View>
                 {active ? (
@@ -59,7 +61,7 @@ export default function ThemeSettings() {
                     <Feather name="check" size={16} color={colors.onBrand} />
                   </View>
                 ) : (
-                  <View style={[styles.emptyCheck, { borderColor: t.ink + "33" }]} />
+                  <View style={[styles.emptyCheck, { borderColor: item.ink + "33" }]} />
                 )}
               </Pressable>
             </Animated.View>

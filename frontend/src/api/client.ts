@@ -23,6 +23,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions, storageBucket } from "@/src/lib/firebase";
+import { getLang, L } from "@/src/lib/format";
 
 export const TOKEN_KEY = "saklio_token";
 
@@ -34,11 +35,14 @@ const DEMO_PURCHASES = [
   { name: "Nike Air Max", merchant: "Nike", category: "moda", price: 3299, currency: "TL", days_ago: 5, return_days: 30, warranty_months: 12 },
   { name: "Philips Airfryer", merchant: "Trendyol", category: "ev", price: 2799, currency: "TL", days_ago: 25, return_days: 14, warranty_months: 24 },
   { name: "Michelin Lastik Seti", merchant: "Lastik.com", category: "otomotiv", price: 8999, currency: "TL", days_ago: 90, return_days: 14, warranty_months: 60 },
+  { name: "Haftalık market", merchant: "Migros", category: "gida", price: 842, currency: "TL", days_ago: 4, return_days: 0, warranty_months: 0 },
+  { name: "Eczane alışverişi", merchant: "Eczane", category: "saglik", price: 219, currency: "TL", days_ago: 9, return_days: 14, warranty_months: 0 },
+  { name: "Akaryakıt", merchant: "Opet", category: "ulasim", price: 1450, currency: "TL", days_ago: 2, return_days: 0, warranty_months: 0 },
 ];
 
 function uid() {
   const u = auth.currentUser;
-  if (!u) throw new Error("Giriş gerekli");
+  if (!u) throw new Error(L("Giriş gerekli", "Sign in required"));
   return u.uid;
 }
 
@@ -118,42 +122,71 @@ async function listAllProducts() {
   return snap.docs.map(productFromDoc);
 }
 
+function mapFirebaseError(e: any): Error {
+  const code = String(e?.code || "");
+  const msg = String(e?.message || "");
+  if (code === "auth/email-already-in-use") return new Error(L("Bu e-posta zaten kayıtlı. Giriş yapmayı dene.", "This email is already registered. Try signing in."));
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found" || code === "auth/invalid-email") {
+    return new Error(L("E-posta veya şifre hatalı.", "Incorrect email or password."));
+  }
+  if (code === "auth/weak-password") return new Error(L("Şifre en az 6 karakter olmalı.", "Password must be at least 6 characters."));
+  if (code === "permission-denied" || msg.toLowerCase().includes("insufficient permissions")) {
+    return new Error(L("Profil kaydı tamamlanamadı. Bir kez daha giriş yap.", "Profile could not be saved. Please sign in again."));
+  }
+  return new Error(msg || L("Bir hata oluştu", "Something went wrong"));
+}
+
+async function writeUserProfile(userId: string, name: string, email: string) {
+    await setDoc(doc(db, "users", userId), {
+    name: (name || "Saklio").slice(0, 80),
+    email: (email || "").trim().toLowerCase(),
+    theme: "soft",
+    currency: "TL",
+    language: getLang(),
+    owner_id: userId,
+    created_at: Timestamp.now(),
+  }, { merge: true });
+}
+
+function shoppingCol(userId = uid()) {
+  return collection(db, "users", userId, "shoppingItems");
+}
+
 export const api = {
   async register(name: string, email: string, password: string) {
-    const cred = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-    await updateProfile(cred.user, { displayName: name });
-    await setDoc(doc(db, "users", cred.user.uid), {
-      name,
-      email: email.trim().toLowerCase(),
-      theme: "soft",
-      currency: "TL",
-      language: "tr",
-      owner_id: cred.user.uid,
-      created_at: serverTimestamp(),
-    });
-    const user = await profileDoc();
-    return { token: await cred.user.getIdToken(), user };
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      await updateProfile(cred.user, { displayName: name });
+      await writeUserProfile(cred.user.uid, name, cred.user.email || email);
+      const user = await profileDoc();
+      api.sendWelcomeEmail(name).catch(() => {});
+      return { token: await cred.user.getIdToken(), user };
+    } catch (e) {
+      throw mapFirebaseError(e);
+    }
   },
 
   async login(email: string, password: string) {
-    const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-    const snap = await getDoc(doc(db, "users", cred.user.uid));
-    if (!snap.exists()) {
-      await setDoc(doc(db, "users", cred.user.uid), {
-        name: cred.user.displayName || "Saklio",
-        email: cred.user.email,
-        theme: "soft",
-        currency: "TL",
-        language: "tr",
-        owner_id: cred.user.uid,
-        created_at: serverTimestamp(),
-      });
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      const snap = await getDoc(doc(db, "users", cred.user.uid));
+      if (!snap.exists()) {
+        await writeUserProfile(cred.user.uid, cred.user.displayName || "Saklio", cred.user.email || email);
+      }
+      const user = await profileDoc();
+      return { token: await cred.user.getIdToken(), user };
+    } catch (e) {
+      throw mapFirebaseError(e);
     }
-    const user = await profileDoc();
-    return { token: await cred.user.getIdToken(), user };
   },
 
   async me() {
+    const u = auth.currentUser;
+    if (!u) throw new Error(L("Giriş gerekli", "Sign in required"));
+    const snap = await getDoc(doc(db, "users", u.uid));
+    if (!snap.exists()) {
+      await writeUserProfile(u.uid, u.displayName || "Saklio", u.email || "");
+    }
     return profileDoc();
   },
 
@@ -171,7 +204,7 @@ export const api = {
     };
     if (current.reset_code_hash) next.reset_code_hash = current.reset_code_hash;
     if (current.reset_expires) next.reset_expires = current.reset_expires;
-    await setDoc(refUser, next);
+    await setDoc(refUser, next, { merge: true });
     return profileDoc();
   },
 
@@ -199,7 +232,7 @@ export const api = {
 
   async getProduct(id: string) {
     const snap = await getDoc(doc(db, "users", uid(), "products", id));
-    if (!snap.exists()) throw new Error("Ürün bulunamadı");
+    if (!snap.exists()) throw new Error(L("Ürün bulunamadı", "Product not found"));
     return productFromDoc(snap);
   },
 
@@ -230,7 +263,7 @@ export const api = {
   async updateProduct(id: string, body: any) {
     const refP = doc(db, "users", uid(), "products", id);
     const current = (await getDoc(refP)).data();
-    if (!current) throw new Error("Ürün bulunamadı");
+    if (!current) throw new Error(L("Ürün bulunamadı", "Product not found"));
     await updateDoc(refP, body);
     return productFromDoc(await getDoc(refP));
   },
@@ -243,8 +276,8 @@ export const api = {
   },
 
   async scan(image_base64: string) {
-    const fn = httpsCallable(functions, "scanReceipt");
-    const res = await fn({ image_base64 });
+    const fn = httpsCallable(functions, "scanReceipt", { timeout: 120000 });
+    const res = await fn({ image_base64, lang: getLang() });
     return res.data;
   },
 
@@ -254,6 +287,7 @@ export const api = {
       name: p.name,
       merchant: p.merchant,
       price: p.price,
+      purchase_date: p.purchase_date,
       return_days_left: p.return_days_left,
       warranty_days_left: p.warranty_days_left,
       category: p.category,
@@ -267,7 +301,7 @@ export const api = {
       created_at: serverTimestamp(),
     });
     const fn = httpsCallable(functions, "assistantChat");
-    const res: any = await fn({ message, session_id: sid, products: context });
+    const res: any = await fn({ message, session_id: sid, products: context, lang: getLang() });
     await addDoc(messagesCol(), {
       owner_id: uid(),
       session_id: sid,
@@ -294,22 +328,22 @@ export const api = {
       in_time: rdl != null && rdl >= 0,
       type_ok: true,
     };
-    let verdict = "Maalesef hayır.";
-    let detail = "İade süresi dolmuş görünüyor.";
+    let verdict = L("Maalesef hayır.", "Unfortunately no.");
+    let detail = L("İade süresi dolmuş görünüyor.", "The return window appears to have expired.");
     if (checks.in_time && checks.receipt) {
-      verdict = "Büyük olasılıkla evet.";
-      detail = "Bilgiler resmi mağaza koşullarıyla doğrulandı.";
+      verdict = L("Büyük olasılıkla evet.", "Most likely yes.");
+      detail = L("Bilgiler resmi mağaza koşullarıyla doğrulandı.", "Details match typical store return terms.");
     } else if (checks.in_time) {
-      verdict = "Muhtemelen evet.";
-      detail = "İade süresi içindesin ancak fişini eklemeni öneririz.";
+      verdict = L("Muhtemelen evet.", "Probably yes.");
+      detail = L("İade süresi içindesin ancak fişini eklemeni öneririz.", "You're still in the return window, but adding the receipt helps.");
     }
-    return { verdict, detail, checks, days_left: rdl, warning: "Orijinal ambalaj gerekebilir." };
+    return { verdict, detail, checks, days_left: rdl, warning: L("Orijinal ambalaj gerekebilir.", "Original packaging may be required.") };
   },
 
   async warrantyClaim(product_id: string, problem: string) {
     const product = await api.getProduct(product_id);
     const fn = httpsCallable(functions, "warrantyClaim");
-    const res: any = await fn({ problem, product });
+    const res: any = await fn({ problem, product, lang: getLang() });
     return { ...res.data, product };
   },
 
@@ -344,7 +378,7 @@ export const api = {
   async updateNotify(id: string, body: { notify_return?: boolean; notify_warranty?: boolean }) {
     const refP = doc(db, "users", uid(), "products", id);
     const current = (await getDoc(refP)).data();
-    if (!current) throw new Error("Ürün bulunamadı");
+    if (!current) throw new Error(L("Ürün bulunamadı", "Product not found"));
     await updateDoc(refP, body);
     return productFromDoc(await getDoc(refP));
   },
@@ -366,12 +400,12 @@ export const api = {
       },
       created_at: serverTimestamp(),
     });
-    return { token };
+    return { token, deeplink: `https://sakliov2.web.app/share/${token}` };
   },
 
   async getShare(token: string) {
     const snap = await getDoc(doc(db, "shares", token));
-    if (!snap.exists()) throw new Error("Paylaşım bulunamadı");
+    if (!snap.exists()) throw new Error(L("Paylaşım bulunamadı", "Share not found"));
     return { token, ...snap.data() };
   },
 
@@ -380,15 +414,65 @@ export const api = {
     return api.createProduct({ ...share.product, source: "share" });
   },
 
-  async registerPush(body: { user_id: string; platform: string; device_token: string }) {
+  async registerPush(body: { user_id: string; platform: string; device_token: string; device_name?: string }) {
     const userId = body.user_id || uid();
     await setDoc(doc(db, "users", userId, "pushTokens", body.device_token.slice(-40)), {
       owner_id: userId,
       platform: body.platform,
       device_token: body.device_token,
+      device_name: body.device_name || "",
+      last_seen: serverTimestamp(),
+      created_at: serverTimestamp(),
+    }, { merge: true });
+    return { ok: true };
+  },
+
+  async listShopping() {
+    const snap = await getDocs(query(shoppingCol(), orderBy("created_at", "desc"), limit(200)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data(), created_at: tsToIso(d.data().created_at) }));
+  },
+
+  async addShoppingItem(body: { name: string; qty?: string }) {
+    const added = await addDoc(shoppingCol(), {
+      owner_id: uid(),
+      name: String(body.name || "").trim().slice(0, 80),
+      qty: String(body.qty || "").trim().slice(0, 40),
+      note: "",
+      checked: false,
       created_at: serverTimestamp(),
     });
+    const snap = await getDoc(added);
+    return { id: snap.id, ...snap.data() };
+  },
+
+  async updateShoppingItem(id: string, body: { name?: string; qty?: string; checked?: boolean }) {
+    const refItem = doc(db, "users", uid(), "shoppingItems", id);
+    const current = (await getDoc(refItem)).data();
+    if (!current) throw new Error(L("Ürün bulunamadı", "Product not found"));
+    await updateDoc(refItem, {
+      name: body.name != null ? String(body.name).trim().slice(0, 80) : current.name,
+      qty: body.qty != null ? String(body.qty).trim().slice(0, 40) : current.qty || "",
+      note: current.note || "",
+      checked: body.checked != null ? Boolean(body.checked) : current.checked,
+      owner_id: current.owner_id,
+      created_at: current.created_at,
+    });
+    return { id, ...(await getDoc(refItem)).data() };
+  },
+
+  async deleteShoppingItem(id: string) {
+    await deleteDoc(doc(db, "users", uid(), "shoppingItems", id));
     return { ok: true };
+  },
+
+  async deleteMyAccount() {
+    const fn = httpsCallable(functions, "deleteMyAccount");
+    return (await fn({})).data;
+  },
+
+  async requestPushTest() {
+    const fn = httpsCallable(functions, "sendMyTestPush");
+    return (await fn({ lang: getLang() })).data;
   },
 
   async fxRates() {
@@ -402,52 +486,36 @@ export const api = {
     }
   },
 
-  async exportData() {
-    const [products, documents, user] = await Promise.all([
-      listAllProducts(),
-      getDocs(docsCol()),
-      profileDoc(),
-    ]);
-    return {
-      sent: false,
-      email: user.email,
-      counts: { products: products.length, documents: documents.size },
-      payload: { user, products, documents: documents.docs.map((d) => ({ id: d.id, ...d.data() })) },
-    };
+  async exportData(opts?: { sendEmail?: boolean }) {
+    const fn = httpsCallable(functions, "exportMyData", { timeout: 120000 });
+    const res: any = await fn({ lang: getLang(), sendEmail: opts?.sendEmail });
+    return res.data;
   },
 
   async requestReset() {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const refUser = doc(db, "users", uid());
-    const current = (await getDoc(refUser)).data() || {};
-    await setDoc(refUser, {
-      ...current,
-      owner_id: uid(),
-      reset_code_hash: code,
-      reset_expires: Timestamp.fromDate(new Date(Date.now() + 15 * 60 * 1000)),
-      created_at: current.created_at || Timestamp.now(),
-    });
-    return { email: current.email || auth.currentUser?.email, debug_code: code };
+    const fn = httpsCallable(functions, "requestDeleteCode");
+    const res: any = await fn({ lang: getLang() });
+    return res.data;
   },
 
   async confirmReset(code: string) {
-    const refUser = doc(db, "users", uid());
-    const current = (await getDoc(refUser)).data() || {};
-    const expires = current.reset_expires?.toDate?.() || new Date(0);
-    if (current.reset_code_hash !== code || expires < new Date()) throw new Error("Kod hatalı veya süresi doldu");
-    const [products, documents, messages] = await Promise.all([
-      getDocs(productsCol()),
-      getDocs(docsCol()),
-      getDocs(messagesCol()),
-    ]);
-    await Promise.all([
-      ...products.docs.map((d) => deleteDoc(d.ref)),
-      ...documents.docs.map((d) => deleteDoc(d.ref)),
-      ...messages.docs.map((d) => deleteDoc(d.ref)),
-    ]);
-    const { reset_code_hash, reset_expires, ...rest } = current as any;
-    await setDoc(refUser, { ...rest, owner_id: uid(), created_at: rest.created_at || Timestamp.now() });
-    return { ok: true };
+    const fn = httpsCallable(functions, "confirmDeleteData");
+    return (await fn({ code })).data;
+  },
+
+  async sendMyEmail(body: { subject: string; html: string; text?: string; attachment?: { filename: string; content: string; type?: string } }) {
+    const fn = httpsCallable(functions, "sendMyEmail", { timeout: 60000 });
+    return (await fn({ ...body, lang: getLang() })).data;
+  },
+
+  async sendWelcomeEmail(name?: string) {
+    const fn = httpsCallable(functions, "sendWelcomeEmail");
+    return (await fn({ name, lang: getLang() })).data;
+  },
+
+  async pingSession(body?: { permissions?: any; platform?: string; device?: string }) {
+    const fn = httpsCallable(functions, "pingSession");
+    return (await fn(body || {})).data;
   },
 
   async gmailPreview() {
@@ -480,10 +548,10 @@ export const api = {
     const notes: any[] = [];
     for (const p of products) {
       if (p.return_days_left != null && p.return_days_left >= 0 && p.return_days_left <= 5) {
-        notes.push({ type: "return", title: "İade süresi yaklaşıyor", body: `${p.name} için ${p.return_days_left} gün kaldı`, product_id: p.id, days: p.return_days_left });
+        notes.push({ type: "return", title: L("İade süresi yaklaşıyor", "Return window ending"), body: L(`${p.name} için ${p.return_days_left} gün kaldı`, `${p.return_days_left} days left for ${p.name}`), product_id: p.id, days: p.return_days_left });
       }
       if (p.warranty_days_left != null && p.warranty_days_left >= 0 && p.warranty_days_left <= 45) {
-        notes.push({ type: "warranty", title: "Garanti bitiyor", body: `${p.name} garantisine ${p.warranty_days_left} gün kaldı`, product_id: p.id, days: p.warranty_days_left });
+        notes.push({ type: "warranty", title: L("Garanti bitiyor", "Warranty ending"), body: L(`${p.name} garantisine ${p.warranty_days_left} gün kaldı`, `${p.warranty_days_left} days left on ${p.name} warranty`), product_id: p.id, days: p.warranty_days_left });
       }
     }
     notes.sort((a, b) => a.days - b.days);
@@ -492,8 +560,8 @@ export const api = {
 
   async seedDemo() {
     const existing = await listAllProducts();
-    if (existing.length > 0) return { seeded: false, message: "Zaten ürünler var" };
-    for (const d of DEMO_PURCHASES.slice(0, 4)) {
+    if (existing.length > 0) return { seeded: false, message: L("Zaten ürünler var", "Products already exist") };
+    for (const d of DEMO_PURCHASES) {
       const pd = isoDate(new Date(Date.now() - d.days_ago * 86400000));
       await api.createProduct({
         name: d.name,

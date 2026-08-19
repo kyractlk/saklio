@@ -17,11 +17,13 @@ import { AppText, Button, Card } from "@/src/components/ui";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { formatPrice, daysLabel, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 const CONFETTI = Array.from({ length: 14 });
 
 export default function Success() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<any>(null);
@@ -55,7 +57,7 @@ export default function Success() {
 
         <Animated.View entering={FadeIn.delay(500)}>
           <AppText variant="title" style={{ marginTop: spacing.xl, textAlign: "center" }}>
-            Ürünün Saklio’ya eklendi.
+            {t("added")}
           </AppText>
         </Animated.View>
 
@@ -71,7 +73,7 @@ export default function Success() {
               <View style={styles.stats}>
                 <View style={styles.stat}>
                   <AppText variant="caption" color={colors.mutedText}>
-                    İade
+                    {t("returnShort")}
                   </AppText>
                   <AppText variant="body" weight="semibold" color={colors.success}>
                     {daysLabel(product.return_days_left)}
@@ -80,7 +82,7 @@ export default function Success() {
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 <View style={styles.stat}>
                   <AppText variant="caption" color={colors.mutedText}>
-                    Garanti
+                    {t("warranty")}
                   </AppText>
                   <AppText variant="body" weight="semibold" color={colors.brandDark}>
                     {daysLabel(product.warranty_days_left)}
@@ -95,10 +97,10 @@ export default function Success() {
       <View style={styles.footer}>
         <Button
           testID="success-view-product"
-          title="Ürünü Gör"
+          title={t("viewProduct")}
           onPress={() => router.replace(id ? `/product/${id}` : "/(tabs)")}
         />
-        <Button title="Ana sayfaya dön" variant="ghost" onPress={() => router.replace("/(tabs)")} />
+        <Button title={t("backHome")} variant="ghost" onPress={() => router.replace("/(tabs)")} />
       </View>
     </Screen>
   );

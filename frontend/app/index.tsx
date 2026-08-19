@@ -15,11 +15,13 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useTheme } from "@/src/theme";
 import { SaklioLogo } from "@/src/components/Illustrations";
 import { AppText } from "@/src/components/ui";
+import { useT } from "@/src/i18n";
 
 export default function Splash() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { colors } = useTheme();
+  const { t } = useT();
 
   const scale = useSharedValue(0.6);
   const translateY = useSharedValue(-30);
@@ -66,7 +68,7 @@ export default function Splash() {
       </Animated.View>
       <Animated.View entering={FadeIn.delay(1300).duration(600)}>
         <AppText variant="body" color={colors.mutedText} style={{ marginTop: 8 }}>
-          Satın aldığın her şey, güvende.
+          {t("tagline")}
         </AppText>
       </Animated.View>
     </View>

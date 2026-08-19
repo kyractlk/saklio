@@ -9,9 +9,11 @@ import { ProductCard } from "@/src/components/ProductCard";
 import { ScanReceiptIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
+import { useT } from "@/src/i18n";
 
 export default function Search() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<any[]>([]);
@@ -33,7 +35,7 @@ export default function Search() {
 
   return (
     <Screen edges={["top"]}>
-      <Header title="Ara" onBack={() => router.back()} />
+      <Header title={t("search")} onBack={() => router.back()} />
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <View style={[styles.searchBar, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
           <Feather name="search" size={18} color={colors.mutedText} />
@@ -41,7 +43,7 @@ export default function Search() {
             testID="search-input"
             autoFocus
             style={{ flex: 1, color: colors.onSurface, fontSize: 16 }}
-            placeholder="Ürün, mağaza veya fiş ara"
+            placeholder={t("searchPlaceholder")}
             placeholderTextColor={colors.mutedText}
             value={query}
             onChangeText={setQuery}
@@ -60,8 +62,8 @@ export default function Search() {
             <View style={{ paddingTop: 60 }}>
               <EmptyState
                 illustration={<ScanReceiptIllustration size={140} brand={colors.brand} ink={colors.onSurface} />}
-                title="Sonuç bulunamadı"
-                body="Farklı bir kelime deneyebilirsin."
+                title={t("noResultsT")}
+                body={t("noResultsB")}
               />
             </View>
           }

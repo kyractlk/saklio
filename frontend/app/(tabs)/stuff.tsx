@@ -6,12 +6,12 @@ import { Screen, EmptyState } from "@/src/components/layout";
 import { AppText, Skeleton, Chip } from "@/src/components/ui";
 import { ProductCard, ProductThumb, StatusChips } from "@/src/components/ProductCard";
 import { EmptyBoxIllustration } from "@/src/components/Illustrations";
-import { useTheme, spacing, radius, CATEGORY_LABELS } from "@/src/theme";
+import { useTheme, spacing, radius } from "@/src/theme";
 import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { formatPrice, haptic } from "@/src/lib/format";
 
-const CATEGORIES = ["tumu", "elektronik", "moda", "ev", "otomotiv", "diger"];
+const CATEGORIES = ["tumu", "elektronik", "moda", "ev", "otomotiv", "gida", "saglik", "ulasim", "fatura", "eglence", "diger"];
 
 export default function MyStuff() {
   const { colors } = useTheme();

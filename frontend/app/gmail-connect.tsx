@@ -9,11 +9,13 @@ import { MailInboxIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { formatPrice, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 type Phase = "idle" | "scanning" | "result";
 
 export default function GmailConnect() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [count, setCount] = useState(0);
@@ -60,7 +62,7 @@ export default function GmailConnect() {
 
   return (
     <Screen>
-      <Header title="Satın alma geçmişini içe aktar" onBack={() => router.back()} />
+      <Header title={t("importPurchases")} onBack={() => router.back()} />
       <View style={styles.container}>
         {phase === "idle" && (
           <Animated.View entering={FadeIn} style={styles.center}>
@@ -68,10 +70,10 @@ export default function GmailConnect() {
               <MailInboxIllustration size={200} brand={colors.brand} ink={colors.onSurface} />
             </View>
             <AppText variant="section" style={{ marginTop: spacing.xl, textAlign: "center" }}>
-              Gmail’deki alışverişlerini otomatik bul
+              {t("gmailFindT")}
             </AppText>
             <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center", maxWidth: 300 }}>
-              Saklio, sipariş e-postalarını tarayarak ürünlerini senin yerine ekler.
+              {t("gmailFindB")}
             </AppText>
           </Animated.View>
         )}
@@ -82,7 +84,7 @@ export default function GmailConnect() {
               {count}
             </AppText>
             <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm }}>
-              ürün bulundu…
+              {t("productsFound")}
             </AppText>
           </View>
         )}
@@ -93,10 +95,10 @@ export default function GmailConnect() {
               <Feather name="check" size={40} color={colors.onBrand} />
             </View>
             <AppText variant="title" style={{ marginTop: spacing.lg, textAlign: "center" }}>
-              {found} satın alma bulduk.
+              {t("foundPurchases", { n: found })}
             </AppText>
             <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
-              Hepsini Saklio’ya ekleyerek takibe başlayabilirsin.
+              {t("foundPurchasesB")}
             </AppText>
           </Animated.View>
         )}
@@ -106,15 +108,15 @@ export default function GmailConnect() {
         {phase === "idle" && (
           <Button
             testID="gmail-connect-btn"
-            title="Gmail’i Bağla"
+            title={t("connectGmailCta")}
             onPress={connect}
             icon={<Feather name="mail" size={18} color={colors.onBrand} />}
           />
         )}
         {phase === "result" && (
           <>
-            <Button testID="gmail-import-all" title="Tümünü içe aktar" onPress={doImport} loading={importing} />
-            <Button testID="gmail-review" title="Şimdilik geç" variant="ghost" onPress={() => router.back()} />
+            <Button testID="gmail-import-all" title={t("importAll")} onPress={doImport} loading={importing} />
+            <Button testID="gmail-review" title={t("skipForNow")} variant="ghost" onPress={() => router.back()} />
           </>
         )}
       </View>

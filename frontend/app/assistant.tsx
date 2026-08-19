@@ -11,8 +11,7 @@ import { SaklioLogo } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { haptic } from "@/src/lib/format";
-
-const QUICK = ["Neyi iade edebilirim?", "Garantisi biten ürünlerim?", "En pahalı eşyam ne?"];
+import { useT } from "@/src/i18n";
 
 interface Msg {
   role: "user" | "assistant";
@@ -21,12 +20,14 @@ interface Msg {
 
 export default function Assistant() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const QUICK = [t("q1"), t("q2"), t("q3")];
 
   useEffect(() => {
     api
@@ -47,7 +48,7 @@ export default function Assistant() {
       const res: any = await api.assistantChat(text.trim());
       setMessages((m) => [...m, { role: "assistant", text: res.reply }]);
     } catch {
-      setMessages((m) => [...m, { role: "assistant", text: "Şu an yanıt veremiyorum, birazdan tekrar dene." }]);
+      setMessages((m) => [...m, { role: "assistant", text: t("assistantErr") }]);
     } finally {
       setSending(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -56,7 +57,7 @@ export default function Assistant() {
 
   return (
     <Screen edges={["top"]}>
-      <Header title="Saklio Asistan" subtitle="Eşyaların hakkında her şeyi sor" onBack={() => router.back()} />
+      <Header title={t("assistant")} subtitle={t("assistantSub")} onBack={() => router.back()} />
       <KeyboardAvoidingView behavior="translate-with-padding" style={{ flex: 1 }} keyboardVerticalOffset={0}>
         <ScrollView
           ref={scrollRef}
@@ -67,10 +68,10 @@ export default function Assistant() {
             <View style={{ alignItems: "center", paddingTop: spacing.xl }}>
               <SaklioLogo size={56} color={colors.brandDark} accent={colors.brand} />
               <AppText variant="section" style={{ marginTop: spacing.md, textAlign: "center" }}>
-                Merhaba, ben Saklio Asistan
+                {t("assistantHi")}
               </AppText>
               <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
-                İade, garanti ve eşyaların hakkında soru sor.
+                {t("assistantHiB")}
               </AppText>
             </View>
           ) : (
@@ -128,7 +129,7 @@ export default function Assistant() {
             <TextInput
               testID="assistant-input"
               style={{ flex: 1, color: colors.onSurface, fontSize: 16, maxHeight: 100 }}
-              placeholder="Bir şey sor…"
+              placeholder={t("askSomething")}
               placeholderTextColor={colors.mutedText}
               value={input}
               onChangeText={setInput}

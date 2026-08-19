@@ -89,23 +89,25 @@ export function EmptyState({
 }) {
   const { colors } = useTheme();
   return (
-    <Animated.View entering={FadeIn.duration(400)} style={styles.empty} testID={testID}>
-      {illustration}
-      <AppText variant="section" style={{ marginTop: spacing.lg, textAlign: "center" }}>
-        {title}
-      </AppText>
-      {body ? (
-        <AppText
-          variant="body"
-          color={colors.mutedText}
-          style={{ marginTop: spacing.sm, textAlign: "center", maxWidth: 300 }}
-        >
-          {body}
+    <Animated.View entering={FadeIn.duration(400)} testID={testID}>
+      <View style={styles.empty}>
+        {illustration}
+        <AppText variant="section" style={{ marginTop: spacing.lg, textAlign: "center" }}>
+          {title}
         </AppText>
-      ) : null}
-      {cta && onCta ? (
-        <Button title={cta} onPress={onCta} testID="empty-cta" style={{ marginTop: spacing.lg, minWidth: 220 }} />
-      ) : null}
+        {body ? (
+          <AppText
+            variant="body"
+            color={colors.mutedText}
+            style={{ marginTop: spacing.sm, textAlign: "center", maxWidth: 300 }}
+          >
+            {body}
+          </AppText>
+        ) : null}
+        {cta && onCta ? (
+          <Button title={cta} onPress={onCta} testID="empty-cta" style={{ marginTop: spacing.lg, minWidth: 220 }} />
+        ) : null}
+      </View>
     </Animated.View>
   );
 }

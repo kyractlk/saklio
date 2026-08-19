@@ -11,10 +11,13 @@ import { AppText, Button, Input } from "@/src/components/ui";
 import { SaklioLogo } from "@/src/components/Illustrations";
 import { useAuth } from "@/src/context/AuthContext";
 import { haptic } from "@/src/lib/format";
+import { LangSwitch, useT } from "@/src/i18n";
+import { AystechMark } from "@/src/components/AystechMark";
 
 export default function Login() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useT();
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +26,7 @@ export default function Login() {
 
   const submit = async () => {
     if (!email || !password) {
-      setError("Lütfen tüm alanları doldur");
+      setError(t("fillAll"));
       return;
     }
     setLoading(true);
@@ -34,7 +37,7 @@ export default function Login() {
       router.replace("/(tabs)");
     } catch (e: any) {
       haptic.error();
-      setError(e.message || "Giriş başarısız");
+      setError(e.message || t("loginFail"));
     } finally {
       setLoading(false);
     }
@@ -51,21 +54,24 @@ export default function Login() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
+        <View style={{ alignItems: "flex-end", marginBottom: spacing.md }}>
+          <LangSwitch />
+        </View>
         <View style={styles.header}>
           <SaklioLogo size={64} color={colors.brandDark} accent={colors.brand} />
           <AppText variant="title" style={{ marginTop: spacing.md }}>
-            Tekrar hoş geldin
+            {t("welcomeBack")}
           </AppText>
           <AppText variant="body" color={colors.mutedText} style={{ marginTop: 4 }}>
-            Fişi çek, gerisini Saklio halletsin.
+            {t("slogan")}
           </AppText>
         </View>
 
         <Animated.View entering={FadeInDown.duration(400)} style={{ gap: spacing.md }}>
           <Input
             testID="login-email"
-            label="E-posta"
-            placeholder="ornek@mail.com"
+            label={t("email")}
+            placeholder={t("emailPh")}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -74,7 +80,7 @@ export default function Login() {
           />
           <Input
             testID="login-password"
-            label="Şifre"
+            label={t("password")}
             placeholder="••••••••"
             secureTextEntry
             value={password}
@@ -82,7 +88,7 @@ export default function Login() {
             icon={<Feather name="lock" size={18} color={colors.mutedText} />}
             error={error}
           />
-          <Button testID="login-submit" title="E-posta ile devam et" onPress={submit} loading={loading} />
+          <Button testID="login-submit" title={t("continueEmail")} onPress={submit} loading={loading} />
         </Animated.View>
 
         <Pressable
@@ -94,13 +100,14 @@ export default function Login() {
           style={{ marginTop: spacing.lg, alignItems: "center" }}
         >
           <AppText variant="body" color={colors.mutedText}>
-            Hesabın yok mu? <AppText color={colors.brandDark} weight="semibold">Kayıt ol</AppText>
+            {t("noAccount")}<AppText color={colors.brandDark} weight="semibold">{t("register")}</AppText>
           </AppText>
         </Pressable>
 
         <AppText variant="caption" color={colors.mutedText} style={styles.privacy}>
-          Kişisel verilerin yalnızca senin ürünlerini yönetmek için kullanılır.
+          {t("privacy")}
         </AppText>
+        <AystechMark compact />
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );

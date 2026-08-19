@@ -102,10 +102,12 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   wrap: {
-    position: "absolute",
+    // Tab bar'ı absolute konumlandırınca içerik üstüne biniyor.
+    // Expo Router'da custom tabBar'ımızın layout içinde yer ayırmasını sağlıyoruz.
+    position: "relative",
     left: 0,
     right: 0,
-    bottom: 0,
+    width: "100%",
     alignItems: "center",
   },
   bar: {

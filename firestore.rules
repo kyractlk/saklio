@@ -15,7 +15,8 @@ rules_version = '2';
 //   owner_id, product_id, type, name, file_path, created_at
 // users/{userId}/messages/{msgId}
 //   owner_id, session_id, role, text, created_at
-// users/{userId}/pushTokens/{tokenId}
+// users/{userId}/shoppingItems/{itemId}
+//   owner_id, name, qty?, note?, checked, created_at
 //   owner_id, platform, device_token, created_at
 // shares/{token}
 //   from_user_id, product map, created_at
@@ -31,7 +32,8 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     function isValidEmail(email) {
-      return email is string && email.matches('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$');
+      return email is string && email.size() >= 5 && email.size() <= 320
+        && email.matches('.*@.*\\..+');
     }
     function themes() {
       return ['soft', 'dark', 'color', 'sunset', 'ocean'];
@@ -40,14 +42,15 @@ service cloud.firestore {
       return ['TL', 'USD', 'EUR', 'SEK', 'DKK'];
     }
     function categories() {
-      return ['elektronik', 'moda', 'ev', 'otomotiv', 'diger'];
+      return ['elektronik', 'moda', 'ev', 'otomotiv', 'gida', 'saglik', 'ulasim', 'fatura', 'eglence', 'diger'];
     }
 
     function isValidUser(data) {
       return data.keys().hasAll(['name', 'email', 'theme', 'currency', 'owner_id', 'created_at'])
         && data.keys().hasOnly([
           'name', 'email', 'theme', 'currency', 'language', 'owner_id', 'created_at',
-          'reset_code_hash', 'reset_expires'
+          'reset_code_hash', 'reset_expires', 'last_seen', 'last_platform', 'last_device',
+          'permissions', 'banned', 'ban_reason'
         ])
         && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
         && isValidEmail(data.email)
@@ -57,7 +60,13 @@ service cloud.firestore {
         && data.created_at is timestamp
         && (!('language' in data) || (data.language in ['tr', 'en']))
         && (!('reset_code_hash' in data) || (data.reset_code_hash is string && data.reset_code_hash.size() <= 128))
-        && (!('reset_expires' in data) || data.reset_expires is timestamp);
+        && (!('reset_expires' in data) || data.reset_expires is timestamp)
+        && (!('last_seen' in data) || data.last_seen is timestamp)
+        && (!('last_platform' in data) || (data.last_platform is string && data.last_platform.size() <= 24))
+        && (!('last_device' in data) || (data.last_device is string && data.last_device.size() <= 80))
+        && (!('permissions' in data) || data.permissions is map)
+        && (!('banned' in data) || data.banned is bool)
+        && (!('ban_reason' in data) || (data.ban_reason is string && data.ban_reason.size() <= 200));
     }
 
     function isValidProduct(data) {
@@ -107,6 +116,17 @@ service cloud.firestore {
         && data.created_at is timestamp;
     }
 
+    function isValidShoppingItem(data) {
+      return data.keys().hasAll(['owner_id', 'name', 'checked', 'created_at'])
+        && data.keys().hasOnly(['owner_id', 'name', 'qty', 'note', 'checked', 'created_at'])
+        && data.owner_id == request.auth.uid
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.checked is bool
+        && data.created_at is timestamp
+        && (!('qty' in data) || (data.qty is string && data.qty.size() <= 40))
+        && (!('note' in data) || (data.note is string && data.note.size() <= 200));
+    }
+
     function isValidShare(data) {
       return data.keys().hasAll(['from_user_id', 'product', 'created_at'])
         && data.keys().hasOnly(['from_user_id', 'product', 'created_at'])
@@ -122,7 +142,9 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isValidUser(request.resource.data)
         && request.resource.data.owner_id == resource.data.owner_id
         && request.resource.data.created_at == resource.data.created_at
-        && request.resource.data.email == resource.data.email;
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.get('banned', false) == resource.data.get('banned', false)
+        && request.resource.data.get('ban_reason', '') == resource.data.get('ban_reason', '');
       allow delete: if false;
 
       match /products/{productId} {
@@ -145,6 +167,15 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidMessage(request.resource.data);
         allow update: if false;
+        allow delete: if isOwner(userId);
+      }
+
+      match /shoppingItems/{itemId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidShoppingItem(request.resource.data);
+        allow update: if isOwner(userId) && isValidShoppingItem(request.resource.data)
+          && request.resource.data.owner_id == resource.data.owner_id
+          && request.resource.data.created_at == resource.data.created_at;
         allow delete: if isOwner(userId);
       }
 

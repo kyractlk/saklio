@@ -15,12 +15,13 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { formatPrice, daysLabel, haptic } from "@/src/lib/format";
+import { spendSummary, ymKey } from "@/src/lib/spend";
 
 export default function Home() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const { t } = useT();
+  const { t, tc } = useT();
   const [data, setData] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,7 @@ export default function Home() {
 
   const actNow = data?.act_now || [];
   const firstName = user?.name?.split(" ")[0] || "";
+  const monthSpend = spendSummary(products, ymKey());
 
   return (
     <Screen>
@@ -172,10 +174,35 @@ export default function Home() {
               </Animated.View>
             )}
 
+            {/* Monthly spend */}
+            <Animated.View entering={FadeInDown.duration(400)} style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+              <Pressable testID="home-finance" onPress={() => router.push("/finance")}>
+                <View style={[styles.financeCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                  <View style={[styles.quickIcon, { backgroundColor: colors.surfaceTertiary }]}>
+                    <Feather name="pie-chart" size={18} color={colors.brandDark} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="caption" color={colors.mutedText}>
+                      {t("financeThisMonth")}
+                    </AppText>
+                    <AppText variant="section" style={{ marginTop: 2, fontVariant: ["tabular-nums"] }}>
+                      {formatPrice(monthSpend.total, data?.currency || user?.currency)}
+                    </AppText>
+                    <AppText variant="body" color={colors.mutedText}>
+                      {monthSpend.top
+                        ? `${tc(monthSpend.top.category)} · ${t("financeShare", { n: Math.round(monthSpend.top.share * 100) })}`
+                        : t("finance")}
+                    </AppText>
+                  </View>
+                  <Feather name="chevron-right" size={20} color={colors.mutedText} />
+                </View>
+              </Pressable>
+            </Animated.View>
+
             {/* Quick actions */}
             <View style={styles.quickRow}>
               <QuickAction icon="message-circle" label={t("assistant")} onPress={() => router.push("/assistant")} />
-              <QuickAction icon="rotate-ccw" label={t("returnCenter")} onPress={() => router.push("/return-center")} />
+              <QuickAction icon="shopping-cart" label={t("shoppingList")} onPress={() => router.push("/shopping-list")} />
             </View>
 
             {/* Recent */}
@@ -303,6 +330,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   quickRow: { flexDirection: "row", gap: spacing.md, paddingHorizontal: spacing.lg, marginTop: spacing.lg },
+  financeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
   quick: {
     flex: 1,
     flexDirection: "row",

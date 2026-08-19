@@ -13,8 +13,8 @@ import { ThemeProvider } from "@/src/theme";
 import { LanguageProvider } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { setMoneyConfig } from "@/src/lib/format";
-import { registerForPush } from "@/src/lib/push";
-import * as Notifications from "expo-notifications";
+import { registerForPush, listenToNotificationOpens } from "@/src/lib/push";
+import { pingNow } from "@/src/lib/session";
 import { useRouter } from "expo-router";
 
 LogBox.ignoreAllLogs(true);
@@ -44,18 +44,21 @@ function ThemedStack() {
     };
   }, [user?.currency]);
 
-  // Push registration + tap handling
+  // Push registration + tap handling + session heartbeat
   useEffect(() => {
-    if (user?.id) registerForPush(user.id);
-    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
-      const url = (resp.notification.request.content.data as any)?.action_url;
-      if (url && typeof url === "string") {
-        try {
-          router.push(url as any);
-        } catch {}
-      }
+    if (!user?.id) return;
+    registerForPush(user.id);
+    pingNow();
+    const t = setInterval(pingNow, 5 * 60 * 1000);
+    const sub = listenToNotificationOpens((url) => {
+      try {
+        router.push(url as any);
+      } catch {}
     });
-    return () => sub.remove();
+    return () => {
+      clearInterval(t);
+      sub.remove();
+    };
   }, [user?.id]);
 
   return (

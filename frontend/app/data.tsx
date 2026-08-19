@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Alert } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -11,9 +11,12 @@ import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
+import { exportReportHtml, downloadHtmlFile, downloadJsonFile } from "@/src/lib/email-templates";
 
 export default function DataScreen() {
   const { colors } = useTheme();
+  const { t, lang } = useT();
   const router = useRouter();
   const { user } = useAuth();
   const { mode } = useLocalSearchParams<{ mode: string }>();
@@ -25,21 +28,38 @@ export default function DataScreen() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
-  const doExport = async () => {
+  const doExportDownload = async () => {
     setLoading(true);
     setError("");
     try {
-      const res: any = await api.exportData();
+      const res: any = await api.exportData({ sendEmail: false });
       haptic.success();
+      if (res.payload) {
+        const html = exportReportHtml(lang, res.payload);
+        downloadHtmlFile("saklio-export.html", html);
+        downloadJsonFile("saklio-export.json", res.payload);
+      }
       setStep("done");
-      setMsg(
-        res.sent
-          ? `Verilerin ${res.email} adresine gönderildi (${res.counts.products} ürün, ${res.counts.documents} belge).`
-          : `Verilerin hazırlandı (${res.counts.products} ürün, ${res.counts.documents} belge). E-posta gönderimi şu an yapılamadı, yayınlandıktan sonra teslim edilecek.`
-      );
+      setMsg(t("exportReady", { products: res.counts?.products || 0, documents: res.counts?.documents || 0 }));
     } catch (e: any) {
       haptic.error();
-      setError(e.message || "İşlem başarısız");
+      setError(e.message || t("opFailed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const doExportEmail = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res: any = await api.exportData({ sendEmail: true });
+      haptic.success();
+      setStep("done");
+      setMsg(t("exportSent", { email: res.email, products: res.counts.products, documents: res.counts.documents }));
+    } catch (e: any) {
+      haptic.error();
+      setError(e.message || t("opFailed"));
     } finally {
       setLoading(false);
     }
@@ -52,10 +72,10 @@ export default function DataScreen() {
       const res: any = await api.requestReset();
       haptic.medium();
       setStep("code");
-      if (res.debug_code) setMsg(`Test kodu: ${res.debug_code}`);
-      else setMsg(`Onay kodu ${res.email} adresine gönderildi.`);
+      if (res.debug_code) setMsg(t("testCode", { code: res.debug_code }));
+      else setMsg(t("codeSentTo", { email: res.email }));
     } catch (e: any) {
-      setError(e.message || "İşlem başarısız");
+      setError(e.message || t("opFailed"));
     } finally {
       setLoading(false);
     }
@@ -63,7 +83,7 @@ export default function DataScreen() {
 
   const confirmDelete = async () => {
     if (code.length < 6) {
-      setError("6 haneli kodu gir");
+      setError(t("enterCode6"));
       return;
     }
     setLoading(true);
@@ -72,10 +92,10 @@ export default function DataScreen() {
       await api.confirmReset(code);
       haptic.success();
       setStep("done");
-      setMsg("Tüm ürün ve belge verilerin silindi. Hesabın aktif.");
+      setMsg(t("dataDeleted"));
     } catch (e: any) {
       haptic.error();
-      setError(e.message || "Kod hatalı");
+      setError(e.message || t("codeWrong"));
     } finally {
       setLoading(false);
     }
@@ -83,7 +103,7 @@ export default function DataScreen() {
 
   return (
     <Screen>
-      <Header title={isDelete ? "Verilerimi sil" : "Verilerimi indir"} onBack={() => router.back()} />
+      <Header title={isDelete ? t("deleteTitle") : t("exportTitle")} onBack={() => router.back()} />
       <KeyboardAwareScrollView contentContainerStyle={{ padding: spacing.lg }} keyboardShouldPersistTaps="handled" bottomOffset={20}>
         {step === "done" ? (
           <Animated.View entering={FadeInDown} style={{ alignItems: "center", paddingTop: spacing.xl }}>
@@ -91,12 +111,12 @@ export default function DataScreen() {
               <Feather name="check" size={40} color="#fff" />
             </View>
             <AppText variant="section" style={{ marginTop: spacing.lg, textAlign: "center" }}>
-              İşlem tamam
+              {t("opDone")}
             </AppText>
             <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
               {msg}
             </AppText>
-            <Button title="Bitti" onPress={() => router.back()} style={{ marginTop: spacing.xl, minWidth: 200 }} />
+            <Button title={t("done")} onPress={() => router.back()} style={{ marginTop: spacing.xl, minWidth: 200 }} />
           </Animated.View>
         ) : (
           <>
@@ -106,13 +126,11 @@ export default function DataScreen() {
                   <Feather name={isDelete ? "trash-2" : "download"} size={22} color={isDelete ? colors.error : colors.brandDark} />
                 </View>
                 <AppText variant="body" color={colors.mutedText} style={{ flex: 1 }}>
-                  {isDelete
-                    ? "Tüm ürünlerin, belgelerin ve asistan geçmişin silinir. Hesabın açık kalır. Onay için e-postana bir kod göndeririz."
-                    : "Ürünlerin, belgelerin ve asistan geçmişin dahil tüm verilerin JSON dosyası olarak e-postana gönderilir."}
+                  {isDelete ? t("deleteInfo") : t("exportInfo")}
                 </AppText>
               </View>
               <AppText variant="caption" color={colors.mutedText} style={{ marginTop: spacing.md }}>
-                E-posta: {user?.email}
+                {t("emailLabel")}: {user?.email}
               </AppText>
             </Card>
 
@@ -120,8 +138,8 @@ export default function DataScreen() {
               <View style={{ marginTop: spacing.lg }}>
                 <Input
                   testID="reset-code"
-                  label="Onay kodu"
-                  placeholder="6 haneli kod"
+                  label={t("confirmCode")}
+                  placeholder={t("codePlaceholder")}
                   keyboardType="number-pad"
                   value={code}
                   onChangeText={setCode}
@@ -144,11 +162,21 @@ export default function DataScreen() {
 
             <View style={{ marginTop: spacing.xl }}>
               {!isDelete ? (
-                <Button testID="do-export" title="Verilerimi e-posta ile gönder" onPress={doExport} loading={loading} />
+                <Button
+                  testID="do-export"
+                  title={t("exportTitle")}
+                  onPress={() => {
+                    Alert.alert(t("exportTitle"), t("exportChooseInfo"), [
+                      { text: t("exportDownloadBtn"), onPress: doExportDownload },
+                      { text: t("sendMyData"), onPress: doExportEmail },
+                    ]);
+                  }}
+                  loading={loading}
+                />
               ) : step === "intro" ? (
-                <Button testID="request-code" title="Onay kodu gönder" onPress={requestCode} loading={loading} />
+                <Button testID="request-code" title={t("sendCode")} onPress={requestCode} loading={loading} />
               ) : (
-                <Button testID="confirm-delete" title="Verilerimi kalıcı olarak sil" onPress={confirmDelete} loading={loading} />
+                <Button testID="confirm-delete" title={t("deletePermanently")} onPress={confirmDelete} loading={loading} />
               )}
             </View>
           </>

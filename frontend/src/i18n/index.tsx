@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { Pressable, Text, View } from "react-native";
 import { storage } from "@/src/utils/storage";
 import { setLangConfig } from "@/src/lib/format";
 
@@ -24,6 +25,11 @@ const D: Dict = {
   cat_moda: { tr: "Moda", en: "Fashion" },
   cat_ev: { tr: "Ev", en: "Home" },
   cat_otomotiv: { tr: "Otomotiv", en: "Automotive" },
+  cat_gida: { tr: "Gıda", en: "Groceries" },
+  cat_saglik: { tr: "Sağlık", en: "Health" },
+  cat_ulasim: { tr: "Ulaşım", en: "Transport" },
+  cat_fatura: { tr: "Fatura", en: "Bills" },
+  cat_eglence: { tr: "Eğlence", en: "Entertainment" },
   cat_diger: { tr: "Diğer", en: "Other" },
   // tabs
   tab_home: { tr: "Ana Sayfa", en: "Home" },
@@ -137,6 +143,9 @@ const D: Dict = {
   grantCam: { tr: "Kamera iznini ver", en: "Grant camera access" },
   openSettings: { tr: "Ayarları aç", en: "Open Settings" },
   pickGallery: { tr: "Galeriden seç", en: "Pick from gallery" },
+  pickFiles: { tr: "Dosyalardan seç", en: "Pick from files" },
+  pickFilesHint: { tr: "JPG veya PNG fiş görseli seç", en: "Choose a JPG or PNG receipt image" },
+  pickFilesBad: { tr: "Şimdilik yalnızca görsel fişler okunuyor. PDF yerine fotoğraf seç.", en: "Only image receipts are read for now. Pick a photo instead of a PDF." },
   frameHint: { tr: "Fişi çerçevenin içine getir", en: "Align the receipt within the frame" },
   // processing
   working: { tr: "Saklio çalışıyor", en: "Saklio is working" },
@@ -230,6 +239,8 @@ const D: Dict = {
   exportTitle: { tr: "Verilerimi indir", en: "Export my data" },
   deleteTitle: { tr: "Verilerimi sil", en: "Delete my data" },
   exportInfo: { tr: "Ürünlerin, belgelerin ve asistan geçmişin dahil tüm verilerin JSON dosyası olarak e-postana gönderilir.", en: "All your data, including products, documents and assistant history, is emailed to you as a JSON file." },
+  exportChooseInfo: { tr: "Verileri indir (HTML/JSON) veya e-posta ile kendine gönder.", en: "Download (HTML/JSON) or email it to yourself." },
+  exportDownloadBtn: { tr: "Veri indir (HTML+JSON)", en: "Download data (HTML+JSON)" },
   deleteInfo: { tr: "Tüm ürünlerin, belgelerin ve asistan geçmişin silinir. Hesabın açık kalır. Onay için e-postana bir kod göndeririz.", en: "All your products, documents and assistant history are deleted. Your account stays active. We email you a code to confirm." },
   emailLabel: { tr: "E-posta", en: "Email" },
   sendCode: { tr: "Onay kodu gönder", en: "Send confirmation code" },
@@ -245,10 +256,119 @@ const D: Dict = {
   addProduct: { tr: "Ürünü ekle", en: "Add product" },
   shareNotFoundT: { tr: "Paylaşım bulunamadı", en: "Share not found" },
   shareNotFoundB: { tr: "Bu bağlantının süresi dolmuş olabilir.", en: "This link may have expired." },
+  unknownMerchant: { tr: "Bilinmiyor", en: "Unknown" },
+  returnableChip: { tr: "İade edilebilir", en: "Returnable" },
+  warrantyActiveChip: { tr: "Garanti aktif", en: "Warranty active" },
+  receiptSavedChip: { tr: "Fiş kayıtlı", en: "Receipt saved" },
+  emailPh: { tr: "ornek@mail.com", en: "you@email.com" },
+  namePh: { tr: "Adın Soyadın", en: "Your full name" },
+  pwPh: { tr: "En az 6 karakter", en: "At least 6 characters" },
+  exampleProduct: { tr: "Örn. Sony WH-1000XM6", en: "e.g. Sony WH-1000XM6" },
+  exampleStore: { tr: "Örn. MediaMarkt", en: "e.g. MediaMarkt" },
+  priceTlLabel: { tr: "Fiyat (TL)", en: "Price" },
+  shareShort: { tr: "Paylaşım", en: "Share" },
+  noReturnable: { tr: "İade edilebilir ürün yok", en: "No returnable products" },
+  importPurchases: { tr: "Satın alma geçmişini içe aktar", en: "Import purchase history" },
+  connectGmailCta: { tr: "Gmail’i Bağla", en: "Connect Gmail" },
+  importAll: { tr: "Tümünü içe aktar", en: "Import all" },
+  skipForNow: { tr: "Şimdilik geç", en: "Skip for now" },
+  enterCode6: { tr: "6 haneli kodu gir", en: "Enter the 6-digit code" },
+  opFailed: { tr: "İşlem başarısız", en: "Action failed" },
+  codeWrong: { tr: "Kod hatalı", en: "Invalid code" },
+  exportSent: { tr: "Verilerin {email} adresine gönderildi ({products} ürün, {documents} belge).", en: "Your data was sent to {email} ({products} products, {documents} documents)." },
+  exportReady: { tr: "Verilerin hazırlandı ({products} ürün, {documents} belge).", en: "Your data is ready ({products} products, {documents} documents)." },
+  testCode: { tr: "Test kodu: {code}", en: "Test code: {code}" },
+  codeSentTo: { tr: "Onay kodu {email} adresine gönderildi.", en: "A confirmation code was sent to {email}." },
+  dataDeleted: { tr: "Tüm ürün ve belge verilerin silindi. Hesabın aktif.", en: "All product and document data was deleted. Your account is still active." },
+  themeSoft: { tr: "Sıcak krem & mint — sakin ve premium", en: "Warm cream & mint — calm and premium" },
+  themeDark: { tr: "Tam karanlık mod — göz dostu", en: "True dark mode — easy on the eyes" },
+  themeColor: { tr: "Pastel tonlar — genç ve canlı", en: "Pastel tones — fresh and lively" },
+  themeSunset: { tr: "Sıcak şeftali — enerjik ve davetkâr", en: "Warm peach — energetic and inviting" },
+  themeOcean: { tr: "Ferah mavi — sakin ve berrak", en: "Airy blue — calm and clear" },
+  errEmailInUse: { tr: "Bu e-posta zaten kayıtlı. Giriş yapmayı dene.", en: "This email is already registered. Try signing in." },
+  errBadCreds: { tr: "E-posta veya şifre hatalı.", en: "Incorrect email or password." },
+  errProfile: { tr: "Profil kaydı tamamlanamadı. Bir kez daha giriş yap.", en: "Profile could not be saved. Please sign in again." },
+  errGeneric: { tr: "Bir hata oluştu", en: "Something went wrong" },
+  errLogin: { tr: "Giriş gerekli", en: "Sign in required" },
+  errProduct: { tr: "Ürün bulunamadı", en: "Product not found" },
+  errShare: { tr: "Paylaşım bulunamadı", en: "Share not found" },
+  errCode: { tr: "Kod hatalı veya süresi doldu", en: "Code is invalid or expired" },
+  verdictYes: { tr: "Büyük olasılıkla evet.", en: "Most likely yes." },
+  verdictYesD: { tr: "Bilgiler resmi mağaza koşullarıyla doğrulandı.", en: "Details match typical store return terms." },
+  verdictMaybe: { tr: "Muhtemelen evet.", en: "Probably yes." },
+  verdictMaybeD: { tr: "İade süresi içindesin ancak fişini eklemeni öneririz.", en: "You're still in the return window, but adding the receipt helps." },
+  verdictNo: { tr: "Maalesef hayır.", en: "Unfortunately no." },
+  verdictNoD: { tr: "İade süresi dolmuş görünüyor.", en: "The return window appears to have expired." },
+  verdictWarn: { tr: "Orijinal ambalaj gerekebilir.", en: "Original packaging may be required." },
+  notifReturnT: { tr: "İade süresi yaklaşıyor", en: "Return window ending" },
+  notifReturnB: { tr: "{name} için {n} gün kaldı", en: "{n} days left for {name}" },
+  notifWarrantyT: { tr: "Garanti bitiyor", en: "Warranty ending" },
+  notifWarrantyB: { tr: "{name} garantisine {n} gün kaldı", en: "{n} days left on {name} warranty" },
+  alreadyProducts: { tr: "Zaten ürünler var", en: "Products already exist" },
+  emailLoginRequired: { tr: "Giriş gerekli", en: "Sign in required" },
+  nDays: { tr: "{n} gün", en: "{n} days" },
+  nMonths: { tr: "{n} ay", en: "{n} months" },
+  totalReturnableValue: { tr: "Toplam iade edilebilir değer", en: "Total returnable value" },
+  noReturnableB: { tr: "Şu an iade süresi devam eden bir ürünün bulunmuyor.", en: "You don't have any products still in their return window." },
+  exportNotSent: { tr: "E-posta gönderimi şu an yapılamadı; HTML raporu indirildi.", en: "Email could not be sent yet; the HTML report was downloaded." },
+  downloadReport: { tr: "HTML raporu indir", en: "Download HTML report" },
+  haveAccount: { tr: "Zaten hesabın var mı? ", en: "Already have an account? " },
+  login: { tr: "Giriş yap", en: "Sign in" },
+  gmailFindT: { tr: "Gmail’deki alışverişlerini otomatik bul", en: "Find your Gmail purchases automatically" },
+  gmailFindB: { tr: "Saklio, sipariş e-postalarını tarayarak ürünlerini senin yerine ekler.", en: "Saklio scans your order emails and adds the products for you." },
+  productsFound: { tr: "ürün bulundu…", en: "products found…" },
+  foundPurchases: { tr: "{n} satın alma bulduk.", en: "We found {n} purchases." },
+  foundPurchasesB: { tr: "Hepsini Saklio’ya ekleyerek takibe başlayabilirsin.", en: "Add them all to Saklio and start tracking." },
+  shareMsgFull: { tr: "Saklio’da bir ürün paylaştım: {name}", en: "I shared a product on Saklio: {name}" },
+  shoppingList: { tr: "Alışveriş listesi", en: "Shopping list" },
+  shoppingSub: { tr: "İhtiyacın olanları yaz, indir veya kendine gönder", en: "Add what you need, then download or send it to yourself" },
+  shoppingEmptyT: { tr: "Liste boş", en: "List is empty" },
+  shoppingEmptyB: { tr: "Süt, fiş kağıdı, yedek kablo… ekle, unutma.", en: "Milk, receipt paper, a spare cable… add it so you don’t forget." },
+  addItem: { tr: "Ürün ekle", en: "Add item" },
+  itemName: { tr: "Ne alacaksın?", en: "What do you need?" },
+  qty: { tr: "Adet / miktar", en: "Qty" },
+  emailMeList: { tr: "Kendime mail at", en: "Email me this list" },
+  downloadList: { tr: "Listeyi indir", en: "Download list" },
+  listSent: { tr: "Alışveriş listen hazırlandı.", en: "Your shopping list is ready." },
+  listMailed: { tr: "Mail uygulaman açıldı.", en: "Your mail app was opened." },
+  enablePush: { tr: "Bildirimleri aç", en: "Enable notifications" },
+  pushOn: { tr: "Bildirimler açık", en: "Notifications on" },
+  pushOff: { tr: "Bildirim izni yok", en: "Notifications off" },
+  legal: { tr: "Yasal", en: "Legal" },
+  privacyPolicy: { tr: "Gizlilik politikası", en: "Privacy policy" },
+  terms: { tr: "Kullanım şartları", en: "Terms of use" },
+  childSafety: { tr: "Çocuk güvenliği", en: "Child safety" },
+  deleteAccount: { tr: "Hesabı sil", en: "Delete account" },
+  support: { tr: "Destek", en: "Support" },
+  producedBy: { tr: "aystech tarafından üretildi · Kayra Çatalkaya", en: "Produced by aystech · Kayra Çatalkaya" },
+  finance: { tr: "Harcama özeti", en: "Spending summary" },
+  financeSub: { tr: "Bu ay nerelere harcadığını gör, indir veya e-posta ile al.", en: "See where you spent this month, then download or email it." },
+  financeThisMonth: { tr: "Bu ay", en: "This month" },
+  financeLastMonth: { tr: "Geçen ay", en: "Last month" },
+  financeTotal: { tr: "Toplam harcama", en: "Total spend" },
+  financeReceipts: { tr: "{n} fiş", en: "{n} receipts" },
+  financeTop: { tr: "En çok harcadığın sektör", en: "Top spending sector" },
+  financeEmptyT: { tr: "Bu ay henüz harcama yok", en: "No spend this month yet" },
+  financeEmptyB: { tr: "Fiş taradıkça sektörlere göre dağılım burada birikecek.", en: "As you scan receipts, sector spending will appear here." },
+  financeShare: { tr: "%{n}", en: "{n}%" },
+  downloadFinance: { tr: "Raporu indir", en: "Download report" },
+  emailFinance: { tr: "E-posta ile al", en: "Email report" },
+  financeReady: { tr: "Harcama raporun hazırlandı.", en: "Your spending report is ready." },
+  financeMailed: { tr: "Mail uygulaman açıldı.", en: "Your mail app was opened." },
 };
 
 const CATEGORY_KEY: Record<string, string> = {
-  tumu: "all", elektronik: "cat_elektronik", moda: "cat_moda", ev: "cat_ev", otomotiv: "cat_otomotiv", diger: "cat_diger",
+  tumu: "all",
+  elektronik: "cat_elektronik",
+  moda: "cat_moda",
+  ev: "cat_ev",
+  otomotiv: "cat_otomotiv",
+  gida: "cat_gida",
+  saglik: "cat_saglik",
+  ulasim: "cat_ulasim",
+  fatura: "cat_fatura",
+  eglence: "cat_eglence",
+  diger: "cat_diger",
 };
 
 interface Ctx {
@@ -260,6 +380,13 @@ interface Ctx {
 
 const LangContext = createContext<Ctx | null>(null);
 
+let hydrateLangFn: ((l: Lang) => void) | null = null;
+
+export function hydrateLang(l: Lang) {
+  setLangConfig(l);
+  hydrateLangFn?.(l);
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("tr");
 
@@ -270,6 +397,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         setLangConfig(l);
       }
     });
+    hydrateLangFn = (l) => {
+      setLangState(l);
+      setLangConfig(l);
+    };
+    return () => {
+      hydrateLangFn = null;
+    };
   }, []);
 
   const setLang = useCallback((l: Lang) => {
@@ -296,4 +430,19 @@ export function useT() {
   const ctx = useContext(LangContext);
   if (!ctx) throw new Error("useT must be used within LanguageProvider");
   return ctx;
+}
+
+export function LangSwitch() {
+  const { lang, setLang } = useT();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      {(["tr", "en"] as const).map((code) => (
+        <Pressable key={code} testID={`lang-switch-${code}`} onPress={() => setLang(code)}>
+          <Text style={{ fontSize: 14, fontWeight: lang === code ? "700" : "500", opacity: lang === code ? 1 : 0.45, letterSpacing: 0.4 }}>
+            {code.toUpperCase()}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
 }

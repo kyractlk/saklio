@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Pressable, StyleSheet, ActivityIndicator, Linking, Platform } from "react-native";
+import { View, Pressable, StyleSheet, ActivityIndicator, Linking, Platform, Alert } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,15 +12,16 @@ import Animated, {
   withRepeat,
   withTiming,
   Easing,
-  FadeIn,
 } from "react-native-reanimated";
 import { AppText, Button } from "@/src/components/ui";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { scanStore } from "@/src/lib/scanStore";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function Scan() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -29,7 +31,17 @@ export default function Scan() {
   useEffect(() => {
     scanLine.value = withRepeat(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }), -1, true);
   }, [scanLine]);
-  const lineStyle = useAnimatedStyle(() => ({ transform: [{ translateY: scanLine.value * 260 }] }));
+  const lineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scanLine.value * 260 }],
+    opacity: 0.9,
+  }));
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const el = document.activeElement as HTMLElement | null;
+      el?.blur?.();
+    }
+  }, []);
 
   const goProcess = (uri: string, base64?: string) => {
     scanStore.clear();
@@ -43,7 +55,7 @@ export default function Scan() {
     setCapturing(true);
     haptic.heavy();
     try {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.6 });
+      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.55 });
       if (photo?.uri) goProcess(photo.uri, photo.base64);
     } catch {
       setCapturing(false);
@@ -53,7 +65,7 @@ export default function Scan() {
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.6,
+      quality: 0.55,
       base64: true,
     });
     if (!res.canceled && res.assets[0]) {
@@ -61,7 +73,37 @@ export default function Scan() {
     }
   };
 
-  // Permission gate
+  const pickFile = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      type: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/*"],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    const asset = res.assets[0];
+    const mime = String(asset.mimeType || "").toLowerCase();
+    const name = String(asset.name || "").toLowerCase();
+    if (mime.includes("pdf") || name.endsWith(".pdf")) {
+      if (Platform.OS === "web") window.alert(t("pickFilesBad"));
+      else Alert.alert(t("pickFiles"), t("pickFilesBad"));
+      return;
+    }
+    goProcess(asset.uri);
+  };
+
+  const extraPickers = (
+    <View style={{ marginTop: spacing.xl, width: "100%", gap: spacing.md }}>
+      {permission?.canAskAgain ? (
+        <Button testID="grant-camera" title={t("grantCam")} onPress={requestPermission} />
+      ) : (
+        <Button testID="open-settings" title={t("openSettings")} onPress={() => Linking.openSettings()} />
+      )}
+      <Button testID="pick-gallery-alt" title={t("pickGallery")} variant="secondary" onPress={pickImage} />
+      <Button testID="pick-files-alt" title={t("pickFiles")} variant="secondary" onPress={pickFile} />
+      <Button title={t("cancel")} variant="ghost" onPress={() => router.back()} />
+    </View>
+  );
+
   if (!permission) {
     return (
       <View style={[styles.center, { backgroundColor: "#000" }]}>
@@ -75,26 +117,18 @@ export default function Scan() {
       <SafeAreaView style={[styles.center, { backgroundColor: colors.surface, padding: spacing.xl }]}>
         <Feather name="camera" size={48} color={colors.brand} />
         <AppText variant="section" style={{ marginTop: spacing.lg, textAlign: "center" }}>
-          Fişini taramak için kamera izni
+          {t("camPermT")}
         </AppText>
         <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
-          Saklio yalnızca fiş tararken kameranı kullanır.
+          {t("camPermB")}
         </AppText>
-        <View style={{ marginTop: spacing.xl, width: "100%", gap: spacing.md }}>
-          {permission.canAskAgain ? (
-            <Button testID="grant-camera" title="Kamera iznini ver" onPress={requestPermission} />
-          ) : (
-            <Button testID="open-settings" title="Ayarları aç" onPress={() => Linking.openSettings()} />
-          )}
-          <Button testID="pick-gallery-alt" title="Galeriden seç" variant="secondary" onPress={pickImage} />
-          <Button title="Vazgeç" variant="ghost" onPress={() => router.back()} />
-        </View>
+        {extraPickers}
       </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityElementsHidden={false}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
       <SafeAreaView style={styles.overlay} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
@@ -102,31 +136,25 @@ export default function Scan() {
             <Feather name="x" size={24} color="#fff" />
           </Pressable>
           <AppText variant="card" color="#fff">
-            Fiş Tara
+            {t("scan")}
           </AppText>
           <View style={{ width: 44 }} />
         </View>
 
         <View style={styles.frameWrap}>
           <View style={styles.frame}>
-            {/* corners */}
-            {[
-              [styles.cTL],
-              [styles.cTR],
-              [styles.cBL],
-              [styles.cBR],
-            ].map((s, i) => (
+            {[[styles.cTL], [styles.cTR], [styles.cBL], [styles.cBR]].map((s, i) => (
               <View key={i} style={[styles.corner, s[0], { borderColor: colors.brand }]} />
             ))}
             <Animated.View style={[styles.scanLine, lineStyle, { backgroundColor: colors.brand }]} />
           </View>
           <AppText variant="body" color="#fff" style={{ marginTop: spacing.lg, textAlign: "center" }}>
-            Fişi çerçevenin içine getir
+            {t("frameHint")}
           </AppText>
         </View>
 
         <View style={styles.controls}>
-          <Pressable testID="pick-gallery" onPress={pickImage} style={styles.sideBtn}>
+          <Pressable testID="pick-gallery" onPress={pickImage} style={styles.sideBtn} accessibilityLabel={t("pickGallery")}>
             <Feather name="image" size={24} color="#fff" />
           </Pressable>
           <View style={{ alignItems: "center", gap: 8 }}>
@@ -138,10 +166,12 @@ export default function Scan() {
               )}
             </Pressable>
             <AppText variant="caption" color="#fff" weight="semibold">
-              Fişi Tara
+              {t("scan")}
             </AppText>
           </View>
-          <View style={styles.sideBtn} />
+          <Pressable testID="pick-files" onPress={pickFile} style={styles.sideBtn} accessibilityLabel={t("pickFiles")}>
+            <Feather name="folder" size={24} color="#fff" />
+          </Pressable>
         </View>
       </SafeAreaView>
     </View>
@@ -175,7 +205,7 @@ const styles = StyleSheet.create({
   cTR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: radius.lg },
   cBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: radius.lg },
   cBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: radius.lg },
-  scanLine: { position: "absolute", left: 8, right: 8, height: 3, borderRadius: 2, opacity: 0.9 },
+  scanLine: { position: "absolute", left: 8, right: 8, height: 3, borderRadius: 2 },
   controls: {
     flexDirection: "row",
     alignItems: "center",

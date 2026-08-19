@@ -5,7 +5,8 @@ import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText, Chip } from "./ui";
 import { useTheme, CATEGORY_COLORS, radius, spacing } from "@/src/theme";
-import { formatPrice, formatDate, daysLabel, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
+import { formatPrice, formatDate, haptic } from "@/src/lib/format";
 import { fileUrl } from "@/src/api/client";
 
 const CATEGORY_ICON: Record<string, any> = {
@@ -13,6 +14,11 @@ const CATEGORY_ICON: Record<string, any> = {
   moda: "shopping-bag",
   ev: "home",
   otomotiv: "truck",
+  gida: "shopping-cart",
+  saglik: "heart",
+  ulasim: "navigation",
+  fatura: "file-text",
+  eglence: "film",
   diger: "box",
 };
 
@@ -74,15 +80,16 @@ export function ProductThumb({
 
 export function StatusChips({ product }: { product: any }) {
   const { colors } = useTheme();
+  const { t } = useT();
   const chips: { label: string; bg: string; fg: string }[] = [];
   if (product.return_status === "active" || product.return_status === "ending") {
-    chips.push({ label: "İade edilebilir", bg: "rgba(104,181,138,0.18)", fg: colors.success });
+    chips.push({ label: t("returnableChip"), bg: "rgba(104,181,138,0.18)", fg: colors.success });
   }
   if (product.warranty_status === "active" || product.warranty_status === "ending") {
-    chips.push({ label: "Garanti aktif", bg: "rgba(143,207,174,0.2)", fg: colors.brandDark });
+    chips.push({ label: t("warrantyActiveChip"), bg: "rgba(143,207,174,0.2)", fg: colors.brandDark });
   }
   if (product.receipt_path || product.image_path) {
-    chips.push({ label: "Fiş kayıtlı", bg: colors.surfaceTertiary, fg: colors.brandDark });
+    chips.push({ label: t("receiptSavedChip"), bg: colors.surfaceTertiary, fg: colors.brandDark });
   }
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
@@ -103,6 +110,7 @@ export function ProductCard({
   index?: number;
 }) {
   const { colors } = useTheme();
+  const { t } = useT();
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).springify().damping(16)}>
       <Pressable
@@ -126,7 +134,7 @@ export function ProductCard({
             {product.name}
           </AppText>
           <AppText variant="caption" color={colors.mutedText}>
-            {product.merchant || "Bilinmiyor"} · {formatDate(product.purchase_date)}
+            {product.merchant || t("unknownMerchant")} · {formatDate(product.purchase_date)}
           </AppText>
           <StatusChips product={product} />
         </View>

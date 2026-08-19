@@ -5,15 +5,17 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Screen, Header } from "@/src/components/layout";
 import { AppText, Button, Input } from "@/src/components/ui";
-import { useTheme, spacing, radius, CATEGORY_LABELS } from "@/src/theme";
+import { useTheme, spacing, radius } from "@/src/theme";
 import { scanStore } from "@/src/lib/scanStore";
 import { api } from "@/src/api/client";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
-const CATS = ["elektronik", "moda", "ev", "otomotiv", "diger"];
+const CATS = ["elektronik", "moda", "ev", "otomotiv", "gida", "saglik", "ulasim", "fatura", "eglence", "diger"];
 
 export default function AddManually() {
   const { colors } = useTheme();
+  const { t, tc } = useT();
   const router = useRouter();
   const r = scanStore.get().result || {};
   const draft = scanStore.get();
@@ -30,7 +32,7 @@ export default function AddManually() {
 
   const save = async () => {
     if (!name.trim()) {
-      setError("Ürün adı gerekli");
+      setError(t("nameRequired"));
       return;
     }
     setSaving(true);
@@ -57,18 +59,18 @@ export default function AddManually() {
 
   return (
     <Screen>
-      <Header title="Ürünü elle ekle" subtitle="Bilgileri kendin doldur" onBack={() => router.back()} />
+      <Header title={t("addManualT")} subtitle={t("addManualB")} onBack={() => router.back()} />
       <KeyboardAwareScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40, gap: spacing.md }}
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
-        <Input testID="m-name" label="Ürün adı" placeholder="Örn. Sony WH-1000XM6" value={name} onChangeText={setName} error={error} />
-        <Input testID="m-merchant" label="Mağaza" placeholder="Örn. MediaMarkt" value={merchant} onChangeText={setMerchant} />
+        <Input testID="m-name" label={t("productName")} placeholder={t("exampleProduct")} value={name} onChangeText={setName} error={error} />
+        <Input testID="m-merchant" label={t("store")} placeholder={t("exampleStore")} value={merchant} onChangeText={setMerchant} />
 
         <View>
           <AppText variant="caption" color={colors.mutedText} style={{ marginBottom: 6 }}>
-            Kategori
+            {t("category")}
           </AppText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
             {CATS.map((c) => {
@@ -87,7 +89,7 @@ export default function AddManually() {
                   ]}
                 >
                   <AppText variant="caption" weight="medium" color={active ? colors.onBrand : colors.mutedText}>
-                    {CATEGORY_LABELS[c]}
+                    {tc(c)}
                   </AppText>
                 </Pressable>
               );
@@ -95,18 +97,18 @@ export default function AddManually() {
           </ScrollView>
         </View>
 
-        <Input testID="m-price" label="Fiyat (TL)" placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />
-        <Input testID="m-date" label="Satın alma tarihi (YYYY-AA-GG)" placeholder="2026-06-01" value={date} onChangeText={setDate} />
+        <Input testID="m-price" label={t("priceTlLabel")} placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />
+        <Input testID="m-date" label={t("purchaseDate")} placeholder="2026-06-01" value={date} onChangeText={setDate} />
         <View style={{ flexDirection: "row", gap: spacing.md }}>
           <View style={{ flex: 1 }}>
-            <Input testID="m-return" label="İade (gün)" keyboardType="numeric" value={returnDays} onChangeText={setReturnDays} />
+            <Input testID="m-return" label={t("returnDaysField")} keyboardType="numeric" value={returnDays} onChangeText={setReturnDays} />
           </View>
           <View style={{ flex: 1 }}>
-            <Input testID="m-warranty" label="Garanti (ay)" keyboardType="numeric" value={warranty} onChangeText={setWarranty} />
+            <Input testID="m-warranty" label={t("warrantyField")} keyboardType="numeric" value={warranty} onChangeText={setWarranty} />
           </View>
         </View>
 
-        <Button testID="m-save" title="Kaydet" onPress={save} loading={saving} style={{ marginTop: spacing.sm }} />
+        <Button testID="m-save" title={t("save")} onPress={save} loading={saving} style={{ marginTop: spacing.sm }} />
       </KeyboardAwareScrollView>
     </Screen>
   );

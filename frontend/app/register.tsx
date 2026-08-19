@@ -11,10 +11,12 @@ import { AppText, Button, Input } from "@/src/components/ui";
 import { Header } from "@/src/components/layout";
 import { useAuth } from "@/src/context/AuthContext";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function Register() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useT();
   const { signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,11 +26,11 @@ export default function Register() {
 
   const submit = async () => {
     if (!name || !email || !password) {
-      setError("Lütfen tüm alanları doldur");
+      setError(t("fillAll"));
       return;
     }
     if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalı");
+      setError(t("pwShort"));
       return;
     }
     setLoading(true);
@@ -39,7 +41,7 @@ export default function Register() {
       router.replace("/(tabs)");
     } catch (e: any) {
       haptic.error();
-      setError(e.message || "Kayıt başarısız");
+      setError(e.message || t("registerFail"));
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,7 @@ export default function Register() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
       <LinearGradient colors={[colors.surfaceTertiary, colors.surface]} style={StyleSheet.absoluteFill} />
-      <Header title="Hesap oluştur" subtitle="Saklio’ya ilk adımını at" onBack={() => router.back()} />
+      <Header title={t("createAccount")} subtitle={t("firstStep")} onBack={() => router.back()} />
       <KeyboardAwareScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -57,16 +59,16 @@ export default function Register() {
         <Animated.View entering={FadeInDown.duration(400)} style={{ gap: spacing.md }}>
           <Input
             testID="register-name"
-            label="Adın"
-            placeholder="Adın Soyadın"
+            label={t("yourName")}
+            placeholder={t("namePh")}
             value={name}
             onChangeText={setName}
             icon={<Feather name="user" size={18} color={colors.mutedText} />}
           />
           <Input
             testID="register-email"
-            label="E-posta"
-            placeholder="ornek@mail.com"
+            label={t("email")}
+            placeholder={t("emailPh")}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -75,15 +77,15 @@ export default function Register() {
           />
           <Input
             testID="register-password"
-            label="Şifre"
-            placeholder="En az 6 karakter"
+            label={t("password")}
+            placeholder={t("pwPh")}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
             icon={<Feather name="lock" size={18} color={colors.mutedText} />}
             error={error}
           />
-          <Button testID="register-submit" title="Kayıt ol" onPress={submit} loading={loading} />
+          <Button testID="register-submit" title={t("register")} onPress={submit} loading={loading} />
         </Animated.View>
       </KeyboardAwareScrollView>
     </SafeAreaView>

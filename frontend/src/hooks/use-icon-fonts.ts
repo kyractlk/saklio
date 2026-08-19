@@ -7,6 +7,7 @@
 // Usage: const [loaded, error] = useIconFonts();
 
 import Constants, { ExecutionEnvironment } from "expo-constants";
+import { Platform } from "react-native";
 import { useFonts } from "expo-font";
 
 const ICON_VECTOR_VERSION = "15.1.1";
@@ -46,7 +47,7 @@ const iconFontMap = (): Record<string, string> =>
 
 export const useIconFonts = (): readonly [boolean, Error | null] =>
   useFonts(
-    Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient || Platform.OS === "web"
       ? iconFontMap()
       : {},
   );

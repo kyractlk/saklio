@@ -8,13 +8,15 @@ import { Screen, Header } from "@/src/components/layout";
 import { AppText, Button, Card, Skeleton } from "@/src/components/ui";
 import { ProductThumb } from "@/src/components/ProductCard";
 import { SaklioLogo } from "@/src/components/Illustrations";
-import { useTheme, spacing, radius, CATEGORY_LABELS } from "@/src/theme";
+import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
 import { formatPrice, formatDate, daysLabel, haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
 
 export default function ShareImport() {
   const { colors } = useTheme();
+  const { t, tc } = useT();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { token } = useLocalSearchParams<{ token: string }>();
@@ -49,14 +51,14 @@ export default function ShareImport() {
   if (error) {
     return (
       <Screen>
-        <Header title="Paylaşım" onBack={() => router.replace("/(tabs)")} />
+        <Header title={t("shareShort")} onBack={() => router.replace("/(tabs)")} />
         <View style={styles.center}>
           <Feather name="link" size={48} color={colors.mutedText} />
           <AppText variant="section" style={{ marginTop: spacing.lg }}>
-            Paylaşım bulunamadı
+            {t("shareNotFoundT")}
           </AppText>
           <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
-            Bu bağlantının süresi dolmuş olabilir.
+            {t("shareNotFoundB")}
           </AppText>
         </View>
       </Screen>
@@ -67,12 +69,12 @@ export default function ShareImport() {
 
   return (
     <Screen>
-      <Header title="Ürün paylaşımı" onBack={() => router.replace("/(tabs)")} />
+      <Header title={t("shareTitle")} onBack={() => router.replace("/(tabs)")} />
       <View style={{ flex: 1, padding: spacing.lg }}>
         <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
           <SaklioLogo size={44} color={colors.brandDark} accent={colors.brand} />
           <AppText variant="body" color={colors.mutedText} style={{ marginTop: spacing.sm, textAlign: "center" }}>
-            {data ? `${data.from_name || "Bir kullanıcı"} seninle bir ürün paylaştı` : "Yükleniyor…"}
+            {data ? t("sharedWithYou", { name: data.from_name || t("someone") }) : t("loading")}
           </AppText>
         </View>
 
@@ -88,7 +90,7 @@ export default function ShareImport() {
                     {p.name}
                   </AppText>
                   <AppText variant="caption" color={colors.mutedText}>
-                    {p.merchant || "—"} · {CATEGORY_LABELS[p.category] || "Diğer"}
+                    {p.merchant || "—"} · {tc(p.category)}
                   </AppText>
                   <AppText variant="body" weight="semibold" style={{ marginTop: 4 }}>
                     {formatPrice(p.price, p.currency)}
@@ -98,7 +100,7 @@ export default function ShareImport() {
               <View style={[styles.stats, { borderTopColor: colors.border }]}>
                 <View style={styles.stat}>
                   <AppText variant="caption" color={colors.mutedText}>
-                    İade
+                    {t("returnShort")}
                   </AppText>
                   <AppText variant="body" weight="semibold" color={colors.success}>
                     {daysLabel(p.return_days_left)}
@@ -106,7 +108,7 @@ export default function ShareImport() {
                 </View>
                 <View style={styles.stat}>
                   <AppText variant="caption" color={colors.mutedText}>
-                    Garanti
+                    {t("warranty")}
                   </AppText>
                   <AppText variant="body" weight="semibold" color={colors.brandDark}>
                     {daysLabel(p.warranty_days_left)}
@@ -119,8 +121,8 @@ export default function ShareImport() {
       </View>
 
       <View style={{ padding: spacing.lg, gap: spacing.sm }}>
-        <Button testID="accept-share" title="Ürünü ekle" onPress={accept} loading={adding} disabled={!p} />
-        <Button title="Vazgeç" variant="ghost" onPress={() => router.replace("/(tabs)")} />
+        <Button testID="accept-share" title={t("addProduct")} onPress={accept} loading={adding} disabled={!p} />
+        <Button title={t("cancel")} variant="ghost" onPress={() => router.replace("/(tabs)")} />
       </View>
     </Screen>
   );

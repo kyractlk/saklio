@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, initializeAuth, browserLocalPersistence } from "firebase/auth";
+import {
+  getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  setPersistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
@@ -20,10 +25,14 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 function makeAuth() {
   try {
     if (Platform.OS === "web") {
-      return getAuth(app);
+      try {
+        return initializeAuth(app, { persistence: browserLocalPersistence });
+      } catch {
+        const existing = getAuth(app);
+        void setPersistence(existing, browserLocalPersistence);
+        return existing;
+      }
     }
-    // Native: persist session in AsyncStorage (Expo / RN)
-    // getReactNativePersistence is RN-only; fallback if Metro tree-shakes it.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getReactNativePersistence } = require("firebase/auth");
     return initializeAuth(app, {
@@ -38,5 +47,3 @@ export const auth = makeAuth();
 export const db = getFirestore(app);
 export const storageBucket = getStorage(app);
 export const functions = getFunctions(app, "europe-west1");
-
-void browserLocalPersistence;

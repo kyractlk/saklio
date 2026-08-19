@@ -13,32 +13,19 @@ import {
   EmptyBoxIllustration,
 } from "@/src/components/Illustrations";
 import { haptic } from "@/src/lib/format";
+import { LangSwitch, useT } from "@/src/i18n";
 
-const SLIDES = [
-  {
-    title: "Fişi çek. Saklio hatırlasın.",
-    body: "Fişlerini, faturalarını ve satın aldığın ürünleri saniyeler içinde kaydet.",
-    Illo: ScanReceiptIllustration,
-  },
-  {
-    title: "İade süresini kaçırma.",
-    body: "Saklio iade tarihlerini takip eder ve süresi dolmadan sana haber verir.",
-    Illo: CalendarIllustration,
-  },
-  {
-    title: "Garantin hep yanında.",
-    body: "Fiş, garanti, kullanım kılavuzu ve ürün bilgileri tek yerde.",
-    Illo: ShieldIllustration,
-  },
-  {
-    title: "Sahip olduğun her şey. Tek yerde.",
-    body: "Fişten garantiye, her şey Saklio’da.",
-    Illo: EmptyBoxIllustration,
-  },
+const SLIDE_ILLOS = [ScanReceiptIllustration, CalendarIllustration, ShieldIllustration, EmptyBoxIllustration];
+const SLIDE_KEYS = [
+  { t: "ob1_t", b: "ob1_b" },
+  { t: "ob2_t", b: "ob2_b" },
+  { t: "ob3_t", b: "ob3_b" },
+  { t: "ob4_t", b: "ob4_b" },
 ];
 
 export default function Onboarding() {
   const router = useRouter();
+  const { t } = useT();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
@@ -51,7 +38,7 @@ export default function Onboarding() {
 
   const next = () => {
     haptic.light();
-    if (page < SLIDES.length - 1) {
+    if (page < SLIDE_KEYS.length - 1) {
       ref.current?.scrollTo({ x: (page + 1) * width, animated: true });
       setPage(page + 1);
     } else {
@@ -62,9 +49,10 @@ export default function Onboarding() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.surface }]}>
       <View style={styles.top}>
+        <LangSwitch />
         <Pressable testID="skip-onboarding" onPress={finish}>
           <AppText variant="body" color={colors.mutedText}>
-            Atla
+            {t("skip")}
           </AppText>
         </Pressable>
       </View>
@@ -75,23 +63,23 @@ export default function Onboarding() {
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
       >
-        {SLIDES.map((s, i) => {
-          const Illo = s.Illo;
+        {SLIDE_KEYS.map((s, i) => {
+          const Illo = SLIDE_ILLOS[i];
           return (
-            <View key={i} style={[styles.slide, { width }]}>
+            <View key={s.t} style={[styles.slide, { width }]}>
               <View style={[styles.illoWrap, { backgroundColor: colors.surfaceTertiary }]}>
                 <Illo size={220} brand={colors.brand} ink={colors.onSurface} />
               </View>
               <Animated.View entering={FadeInUp.duration(400)} style={{ marginTop: spacing.xl }}>
                 <AppText variant="title" style={{ textAlign: "center" }}>
-                  {s.title}
+                  {t(s.t)}
                 </AppText>
                 <AppText
                   variant="body"
                   color={colors.mutedText}
                   style={{ textAlign: "center", marginTop: spacing.md, lineHeight: 24, fontSize: 16 }}
                 >
-                  {s.body}
+                  {t(s.b)}
                 </AppText>
               </Animated.View>
             </View>
@@ -101,7 +89,7 @@ export default function Onboarding() {
 
       <View style={styles.footer}>
         <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
+          {SLIDE_KEYS.map((_, i) => (
             <View
               key={i}
               style={{
@@ -115,7 +103,7 @@ export default function Onboarding() {
         </View>
         <Button
           testID="onboarding-next"
-          title={page === SLIDES.length - 1 ? "Saklio’ya Başla" : "Devam"}
+          title={page === SLIDE_KEYS.length - 1 ? t("getStarted") : t("continue")}
           onPress={next}
         />
       </View>
@@ -125,7 +113,7 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  top: { alignItems: "flex-end", paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   slide: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl },
   illoWrap: {
     width: 280,

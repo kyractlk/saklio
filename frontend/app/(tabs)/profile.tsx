@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, ScrollView, Pressable, StyleSheet, Modal } from "react-native";
+import { View, ScrollView, Pressable, StyleSheet, Modal, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Animated, { SlideInDown } from "react-native-reanimated";
@@ -10,6 +10,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useT } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import { haptic, setMoneyConfig } from "@/src/lib/format";
+import { AystechMark } from "@/src/components/AystechMark";
 
 const THEME_NAMES: Record<string, string> = { soft: "Saklio Soft", dark: "Saklio Dark", color: "Saklio Color", sunset: "Saklio Sunset", ocean: "Saklio Ocean" };
 const CURRENCIES = [
@@ -46,6 +47,7 @@ export default function Profile() {
     haptic.success();
     setLangOpen(false);
     setLang(code);
+    api.updateProfile({ language: code }).catch(() => {});
   };
 
   const rows: { icon: any; label: string; value?: string; onPress: () => void; soon?: boolean }[] = [
@@ -53,6 +55,8 @@ export default function Profile() {
     { icon: "dollar-sign", label: t("currency"), value: user?.currency || "TL", onPress: () => setCurOpen(true) },
     { icon: "globe", label: t("language"), value: LANGS.find((l) => l.code === lang)?.label, onPress: () => setLangOpen(true) },
     { icon: "bell", label: t("notifications"), onPress: () => router.push("/notifications") },
+    { icon: "shopping-cart", label: t("shoppingList"), onPress: () => router.push("/shopping-list") },
+    { icon: "pie-chart", label: t("finance"), onPress: () => router.push("/finance") },
     { icon: "droplet", label: t("theme"), value: THEME_NAMES[theme], onPress: () => router.push("/theme-settings") },
   ];
 
@@ -154,7 +158,7 @@ export default function Profile() {
               <Feather name="download" size={18} color={colors.brandDark} />
             </View>
             <AppText variant="body" style={{ flex: 1 }}>
-              Verilerimi indir
+              {t("exportData")}
             </AppText>
             <Feather name="chevron-right" size={18} color={colors.mutedText} />
           </Pressable>
@@ -170,10 +174,36 @@ export default function Profile() {
               <Feather name="trash-2" size={18} color={colors.error} />
             </View>
             <AppText variant="body" color={colors.error} style={{ flex: 1 }}>
-              Verilerimi sil
+              {t("deleteData")}
             </AppText>
             <Feather name="chevron-right" size={18} color={colors.error} />
           </Pressable>
+        </View>
+        <AppText variant="caption" color={colors.mutedText} style={styles.sectionLabel}>
+          {t("legal")}
+        </AppText>
+        <View style={[styles.list, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginTop: spacing.sm }]}>
+          {[
+            { href: "https://sakliov2.web.app/privacy", label: t("privacyPolicy") },
+            { href: "https://sakliov2.web.app/terms", label: t("terms") },
+            { href: "https://sakliov2.web.app/child-safety", label: t("childSafety") },
+            { href: "https://sakliov2.web.app/delete-account", label: t("deleteAccount") },
+            { href: "https://sakliov2.web.app/support", label: t("support") },
+          ].map((l, i, arr) => (
+            <Pressable
+              key={l.href}
+              onPress={() => {
+                haptic.light();
+                Linking.openURL(l.href);
+              }}
+              style={[styles.row, i < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+            >
+              <AppText variant="body" style={{ flex: 1 }}>
+                {l.label}
+              </AppText>
+              <Feather name="external-link" size={16} color={colors.mutedText} />
+            </Pressable>
+          ))}
         </View>
         <Pressable
           testID="sign-out"
@@ -186,13 +216,14 @@ export default function Profile() {
         >
           <Feather name="log-out" size={18} color={colors.error} />
           <AppText variant="body" color={colors.error} weight="semibold">
-            Çıkış yap
+            {t("signOut")}
           </AppText>
         </Pressable>
 
         <AppText variant="caption" color={colors.mutedText} style={{ textAlign: "center", marginTop: spacing.lg }}>
           saklio · v1.0.0
         </AppText>
+        <AystechMark compact />
       </ScrollView>
 
       <Modal visible={curOpen} transparent animationType="fade" onRequestClose={() => setCurOpen(false)}>
@@ -200,7 +231,7 @@ export default function Profile() {
         <Animated.View entering={SlideInDown.springify().damping(18)} style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           <AppText variant="section" style={{ marginBottom: spacing.md }}>
-            Para birimi
+            {t("currencyTitle")}
           </AppText>
           {CURRENCIES.map((c) => {
             const active = (user?.currency || "TL") === c.code;

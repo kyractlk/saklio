@@ -4,19 +4,25 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Screen, Header, EmptyState } from "@/src/components/layout";
-import { AppText } from "@/src/components/ui";
+import { AppText, Button } from "@/src/components/ui";
 import { ShieldIllustration } from "@/src/components/Illustrations";
 import { useTheme, spacing, radius } from "@/src/theme";
 import { api } from "@/src/api/client";
 import { haptic } from "@/src/lib/format";
+import { useT } from "@/src/i18n";
+import { useAuth } from "@/src/context/AuthContext";
+import { registerForPush } from "@/src/lib/push";
 
 const ICONS: Record<string, any> = { return: "rotate-ccw", warranty: "shield" };
 
 export default function Notifications() {
   const { colors } = useTheme();
+  const { t } = useT();
   const router = useRouter();
+  const { user } = useAuth();
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pushMsg, setPushMsg] = useState("");
 
   useEffect(() => {
     api
@@ -28,7 +34,27 @@ export default function Notifications() {
 
   return (
     <Screen>
-      <Header title="Bildirimler" onBack={() => router.back()} />
+      <Header title={t("notifCenter")} onBack={() => router.back()} />
+      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm }}>
+        <Button
+          title={t("enablePush")}
+          onPress={async () => {
+            haptic.medium();
+            const token = user?.id ? await registerForPush(user.id) : null;
+            setPushMsg(token ? t("pushOn") : t("pushOff"));
+            if (token) {
+              try {
+                await api.requestPushTest();
+              } catch {}
+            }
+          }}
+        />
+        {pushMsg ? (
+          <AppText variant="caption" color={colors.brandDark}>
+            {pushMsg}
+          </AppText>
+        ) : null}
+      </View>
       <FlatList
         data={notes}
         keyExtractor={(_, i) => String(i)}
@@ -39,8 +65,8 @@ export default function Notifications() {
             <View style={{ paddingTop: 60 }}>
               <EmptyState
                 illustration={<ShieldIllustration size={160} brand={colors.brand} ink={colors.onSurface} />}
-                title="Her şey güncel"
-                body="Yaklaşan iade ve garanti tarihleri burada görünecek."
+                title={t("allCurrentT")}
+                body={t("allCurrentB")}
               />
             </View>
           ) : null
