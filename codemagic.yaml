@@ -1,0 +1,128 @@
+# Saklio — Codemagic CI/CD (Expo managed, prebuild on CI)
+# Docs: https://docs.codemagic.io/yaml/building-a-react-native-app/
+#
+# Codemagic'te ayarlanacaklar:
+# 1. Android keystore → Environment → android_signing → "saklio_keystore"
+# 2. Google Play → Groups → google_play (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS)
+# 3. App Store Connect → Integrations → app_store_connect adını aşağıya yaz
+# 4. iOS workflow → APP_ID (App Store Connect'teki uygulama numarası)
+
+workflows:
+  saklio-android-store:
+    name: Saklio Android (Play Store AAB)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    working_directory: frontend
+    environment:
+      android_signing:
+        - saklio_keystore
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "app.saklio"
+      node: v22.13.1
+    scripts:
+      - name: Install dependencies
+        script: |
+          yarn install --frozen-lockfile || yarn install
+      - name: Expo prebuild (Android)
+        script: |
+          npx expo prebuild --platform android --no-install
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build release AAB
+        script: |
+          LATEST=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" 2>/dev/null || echo "")
+          if [ -z "$LATEST" ]; then
+            UPDATED_BUILD_NUMBER=${BUILD_NUMBER:-1}
+          else
+            UPDATED_BUILD_NUMBER=$(($LATEST + 1))
+          fi
+          cd android
+          ./gradlew bundleRelease \
+            -PversionCode=$UPDATED_BUILD_NUMBER \
+            -PversionName=1.0.$UPDATED_BUILD_NUMBER
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+
+  saklio-android-apk:
+    name: Saklio Android (APK test)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: frontend
+    environment:
+      android_signing:
+        - saklio_keystore
+      vars:
+        PACKAGE_NAME: "app.saklio"
+      node: v22.13.1
+    scripts:
+      - name: Install dependencies
+        script: |
+          yarn install --frozen-lockfile || yarn install
+      - name: Expo prebuild (Android)
+        script: |
+          npx expo prebuild --platform android --no-install
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build release APK
+        script: |
+          cd android
+          ./gradlew assembleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+
+  saklio-ios-store:
+    name: Saklio iOS (App Store)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    working_directory: frontend
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.saklio
+      vars:
+        XCODE_WORKSPACE: "Saklio.xcworkspace"
+        XCODE_SCHEME: "Saklio"
+        APP_ID: "0000000000" # App Store Connect → App → General → Apple ID
+      node: v22.13.1
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install dependencies
+        script: |
+          yarn install --frozen-lockfile || yarn install
+      - name: Expo prebuild (iOS)
+        script: |
+          npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods
+        script: |
+          cd ios && pod install
+      - name: Code signing
+        script: |
+          xcode-project use-profiles --warn-only
+      - name: Increment build number
+        script: |
+          cd ios
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST + 1))
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/ios/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
