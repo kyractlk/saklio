@@ -25,8 +25,14 @@ export default function Register() {
   const [error, setError] = useState("");
 
   const submit = async () => {
-    if (!name || !email || !password) {
+    const emailV = email.trim().toLowerCase();
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailV);
+    if (!name || !emailV || !password) {
       setError(t("fillAll"));
+      return;
+    }
+    if (!okEmail) {
+      setError(t("errEmailInvalid"));
       return;
     }
     if (password.length < 6) {
@@ -36,7 +42,7 @@ export default function Register() {
     setLoading(true);
     setError("");
     try {
-      await signUp(name.trim(), email.trim(), password);
+      await signUp(name.trim(), emailV, password);
       haptic.success();
       router.replace("/(tabs)");
     } catch (e: any) {

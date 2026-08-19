@@ -289,6 +289,7 @@ const D: Dict = {
   themeSunset: { tr: "Sıcak şeftali — enerjik ve davetkâr", en: "Warm peach — energetic and inviting" },
   themeOcean: { tr: "Ferah mavi — sakin ve berrak", en: "Airy blue — calm and clear" },
   errEmailInUse: { tr: "Bu e-posta zaten kayıtlı. Giriş yapmayı dene.", en: "This email is already registered. Try signing in." },
+  errEmailInvalid: { tr: "Lütfen geçerli bir e-posta adresi gir.", en: "Please enter a valid email address." },
   errBadCreds: { tr: "E-posta veya şifre hatalı.", en: "Incorrect email or password." },
   errProfile: { tr: "Profil kaydı tamamlanamadı. Bir kez daha giriş yap.", en: "Profile could not be saved. Please sign in again." },
   errGeneric: { tr: "Bir hata oluştu", en: "Something went wrong" },

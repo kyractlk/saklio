@@ -228,7 +228,7 @@ export default function Profile() {
 
       <Modal visible={curOpen} transparent animationType="fade" onRequestClose={() => setCurOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setCurOpen(false)} />
-        <Animated.View entering={SlideInDown.springify().damping(18)} style={[styles.sheet, { backgroundColor: colors.surface }]}>
+        <Animated.View entering={SlideInDown.springify().damping(12)} style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           <AppText variant="section" style={{ marginBottom: spacing.md }}>
             {t("currencyTitle")}
@@ -262,7 +262,7 @@ export default function Profile() {
 
       <Modal visible={langOpen} transparent animationType="fade" onRequestClose={() => setLangOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)} />
-        <Animated.View entering={SlideInDown.springify().damping(18)} style={[styles.sheet, { backgroundColor: colors.surface }]}>
+        <Animated.View entering={SlideInDown.springify().damping(12)} style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
           <AppText variant="section" style={{ marginBottom: spacing.md }}>
             {t("languageTitle")}

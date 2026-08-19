@@ -25,14 +25,20 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const submit = async () => {
-    if (!email || !password) {
+    const emailV = email.trim().toLowerCase();
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailV);
+    if (!emailV || !password) {
       setError(t("fillAll"));
+      return;
+    }
+    if (!okEmail) {
+      setError(t("errEmailInvalid"));
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await signIn(email.trim(), password);
+      await signIn(emailV, password);
       haptic.success();
       router.replace("/(tabs)");
     } catch (e: any) {

@@ -107,9 +107,13 @@ export default function ProductDetail() {
               <Pressable
                 testID="detail-delete"
                 onPress={async () => {
-                  haptic.warning();
-                  await api.deleteProduct(id);
-                  router.back();
+                  try {
+                    haptic.warning();
+                    await api.deleteProduct(id);
+                    router.back();
+                  } catch {
+                    haptic.error();
+                  }
                 }}
                 style={styles.roundBtn}
               >

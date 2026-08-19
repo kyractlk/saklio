@@ -29,7 +29,9 @@ export default function ForgotPassword() {
 
   const sendCode = async () => {
     const trimmed = email.trim().toLowerCase();
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
     if (!trimmed) { setError(t("fillAll")); return; }
+    if (!okEmail) { setError(t("errEmailInvalid")); return; }
     setLoading(true);
     setError("");
     try {
@@ -48,10 +50,13 @@ export default function ForgotPassword() {
   const confirm = async () => {
     if (code.length < 6) { setError(t("enterCode6")); return; }
     if (password.length < 6) { setError(t("errWeakPassword")); return; }
+    const em = email.trim().toLowerCase();
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+    if (!okEmail) { setError(t("errEmailInvalid")); return; }
     setLoading(true);
     setError("");
     try {
-      await api.confirmPasswordResetCode(email.trim().toLowerCase(), code.trim(), password);
+      await api.confirmPasswordResetCode(em, code.trim(), password);
       haptic.success();
       setStep("done");
     } catch (e: any) {
