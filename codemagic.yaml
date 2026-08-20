@@ -2,12 +2,51 @@
 # Docs: https://docs.codemagic.io/yaml/building-a-react-native-app/
 #
 # Codemagic'te ayarlanacaklar:
-# 1. Android keystore → Environment → android_signing → "saklio_keystore"
+# 1. Android keystore → Team settings → Code signing → Android → referans: saklio_keystore
 # 2. Google Play → Groups → google_play (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS)
 # 3. App Store Connect → Integrations → app_store_connect adını aşağıya yaz
 # 4. iOS workflow → APP_ID (App Store Connect'teki uygulama numarası)
 
 workflows:
+  saklio-android-aab:
+    name: Saklio Android (imzalı AAB)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    working_directory: frontend
+    environment:
+      android_signing:
+        - saklio_keystore
+      vars:
+        PACKAGE_NAME: "app.saklio"
+      node: v22.13.1
+    scripts:
+      - name: Install dependencies
+        script: |
+          yarn install --frozen-lockfile || yarn install
+      - name: Expo prebuild (Android)
+        script: |
+          npx expo prebuild --platform android --no-install
+      - name: Codemagic release imzalama
+        script: |
+          node scripts/patch-android-release-signing.js
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build signed release AAB
+        script: |
+          LATEST=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" 2>/dev/null || echo "")
+          if [ -z "$LATEST" ]; then
+            UPDATED_BUILD_NUMBER=${BUILD_NUMBER:-1}
+          else
+            UPDATED_BUILD_NUMBER=$(($LATEST + 1))
+          fi
+          cd android
+          ./gradlew bundleRelease \
+            -PversionCode=$UPDATED_BUILD_NUMBER \
+            -PversionName=1.0.$UPDATED_BUILD_NUMBER
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+
   saklio-android-store:
     name: Saklio Android (Play Store AAB)
     max_build_duration: 120
@@ -28,6 +67,9 @@ workflows:
       - name: Expo prebuild (Android)
         script: |
           npx expo prebuild --platform android --no-install
+      - name: Codemagic release imzalama
+        script: |
+          node scripts/patch-android-release-signing.js
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
@@ -68,6 +110,9 @@ workflows:
       - name: Expo prebuild (Android)
         script: |
           npx expo prebuild --platform android --no-install
+      - name: Codemagic release imzalama
+        script: |
+          node scripts/patch-android-release-signing.js
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
